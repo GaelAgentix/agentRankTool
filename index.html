@@ -105,7 +105,7 @@
   /* Ranked table */
   .head, .row {
     display: grid;
-    grid-template-columns: 88px minmax(0, 1fr) auto;
+    grid-template-columns: 124px minmax(0, 1fr) auto;
     align-items: center;
   }
   .head {
@@ -116,6 +116,7 @@
     letter-spacing: 0.12em;
     text-transform: uppercase;
   }
+  .head span:first-child { padding-left: 20px; }
   .head span:last-child { padding-left: 28px; }
   .list { position: relative; margin: 0; padding: 0; list-style: none; }
   .row {
@@ -131,6 +132,8 @@
     align-self: stretch;
     display: flex;
     align-items: center;
+    gap: 16px;
+    padding-left: 20px;
     border-right: 1px solid var(--hairline);
     color: var(--muted);
     font-size: 2.25rem;
@@ -139,6 +142,8 @@
     font-variant-numeric: tabular-nums;
     touch-action: none;
   }
+  .grip { display: flex; flex: none; color: var(--muted); cursor: grab; }
+  .num { min-width: 1.2ch; }
   .text { min-width: 0; padding: 18px 16px 18px 28px; }
   .name { color: var(--white); font-size: 1.2rem; font-weight: 500; letter-spacing: -0.01em; overflow-wrap: anywhere; }
   .summary { margin-top: 4px; color: var(--body); font-size: 1rem; font-weight: 300; line-height: 1.45; overflow-wrap: anywhere; }
@@ -175,6 +180,7 @@
   .out-section .head { border-bottom-color: var(--hairline); }
   .row.out { cursor: default; min-height: 72px; }
   .row.out .rank { font-size: 1.25rem; }
+  .row.out .grip { visibility: hidden; }
   .row.out .name, .row.out .summary { color: var(--muted); text-decoration: line-through 1px var(--muted); }
 
   /* Drag states (house style: no shadows, no rounded cards) */
@@ -237,8 +243,10 @@
   @media (max-width: 600px) {
     .wrap { padding-top: 32px; }
     h1 { font-size: 2rem; }
-    .head, .row { grid-template-columns: 52px minmax(0, 1fr) auto; }
+    .head, .row { grid-template-columns: 76px minmax(0, 1fr) auto; }
+    .head span:first-child { padding-left: 10px; }
     .head span:last-child { padding-left: 16px; }
+    .rank { gap: 10px; padding-left: 10px; }
     .rank { font-size: 1.75rem; }
     .text { padding: 14px 8px 14px 16px; }
     .act { margin-right: 0; }
@@ -311,6 +319,7 @@
   const TOP = 3;
 
   const ICONS = {
+    grip: '<svg width="12" height="20" viewBox="0 0 12 20" aria-hidden="true"><g fill="currentColor"><circle cx="3" cy="4" r="1.5"/><circle cx="9" cy="4" r="1.5"/><circle cx="3" cy="10" r="1.5"/><circle cx="9" cy="10" r="1.5"/><circle cx="3" cy="16" r="1.5"/><circle cx="9" cy="16" r="1.5"/></g></svg>',
     cross: '<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
     restore: '<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.35-5.65M4 4v4.5h4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   };
@@ -421,7 +430,7 @@
     li.dataset.id = item.id;
     li.tabIndex = 0;
     li.innerHTML =
-      '<span class="rank"></span>' +
+      `<span class="rank"><span class="grip" title="Drag to reorder">${ICONS.grip}</span><span class="num"></span></span>` +
       '<div class="text"><div class="name"></div><div class="summary"></div></div>' +
       `<button type="button" class="act cross" title="Rule out">${ICONS.cross}</button>` +
       `<button type="button" class="act restore" title="Bring back">${ICONS.restore}</button>`;
@@ -490,11 +499,11 @@
     const kids = [...ranked.children].filter((el) => !drag || el !== drag.row);
     kids.forEach((el, i) => {
       const row = el === placeholder ? drag.row : el;
-      row.querySelector('.rank').textContent = i + 1;
+      row.querySelector('.num').textContent = i + 1;
       row.classList.toggle('top', i < TOP);
     });
     for (const el of outList.children) {
-      el.querySelector('.rank').textContent = '✕';
+      el.querySelector('.num').textContent = '✕';
       el.classList.remove('top');
     }
   }
