@@ -1,24 +1,18 @@
 # agentRankTool
 
-A visual aid for Ideal Execution interviewers. Share your screen, show the client the automation candidates, and drag them into the order the client gives you. Star the ones they love, cross out the non-starters, and copy the result into your notes.
+A visual aid for Ideal Execution interviewers. Share your screen, show the client the automation candidates, and drag them into the order the client gives you. The top three are highlighted in orange. Cross out the ones that are not worth pursuing, then copy the result into your notes.
 
 It is one file, `index.html`. No install, no build, no server, no network calls.
 
 ## Use it
 
-1. Open `index.html` in Chrome, Edge, Safari or Firefox.
-2. Paste the candidates into the text box, one per line, and click **Build ranking**.
-3. Type the client or session name in the title.
-4. Click **Present** to hide the controls before you share your screen. Press **Esc** to get them back.
-5. Rank with the client:
-   - Drag any row to move it. Rank numbers update as you drag.
-   - Click the star to mark a favorite.
-   - Click the X to rule a candidate out. It moves to a greyed, crossed-out "Ruled out" list. The arrow icon brings it back.
+1. Open `index.html` in Chrome, Edge, Safari or Firefox. It opens on an empty list.
+2. Paste your candidates (one per line) and click **Save list**. **Edit list** reopens the text box later.
+3. Share your screen and rank with the client:
+   - Drag any row to move it. The top three are highlighted.
+   - Click the X to rule a candidate out. It moves to a crossed-out "Ruled out" list. The arrow icon brings it back.
    - Double-click a name or summary to reword it.
-   - Type in the "+ Add a candidate" box to add one that comes up during the call.
-6. When you are done, click **Copy results** (plain text for notes or email) or **CSV** (for a spreadsheet).
-
-The top 3 rows are highlighted in navy. A dashed "Top 4" cut line sits under rank 4. Change either number with **Highlight top** and **Cut line after**.
+4. Click **Copy results** to copy the ranking as plain text for notes or email.
 
 ### Input format
 
@@ -33,9 +27,9 @@ Weekly KPI Report Builder — Pulls numbers from source systems and drafts the r
 - Separators: ` - ` (with spaces), `:`, `|`, an en or em dash, or a tab. Two columns pasted from Excel or Sheets work as is.
 - Bullets, numbering, `**bold**` and Markdown table pipes are stripped.
 - A name with no summary is fine.
-- **Edit list** reopens the text box with the current order. Lines you keep hold on to their star and ruled-out state; new lines are added where you put them.
+- **Edit list** shows the current order. Saving keeps a candidate's ruled-out state if its name is unchanged. To start the next client, replace the whole text with the new list.
 
-### Keyboard shortcuts
+### Keyboard
 
 Click a row (or Tab to it) first.
 
@@ -43,12 +37,9 @@ Click a row (or Tab to it) first.
 | --- | --- |
 | Alt + Up / Down | Move the row up or down one rank |
 | Up / Down | Move focus to the previous or next row |
-| S | Star or unstar |
 | X | Rule out or bring back |
-| Delete | Delete a ruled-out row |
 | Enter | Rename |
-| Ctrl/Cmd + Z | Undo |
-| Esc | Cancel a drag, cancel an edit, or leave Present mode |
+| Esc | Cancel a drag or an edit |
 
 ## Distribute it
 
@@ -60,11 +51,16 @@ Pick one:
 
 ## Data and privacy
 
-- Everything the interviewer types stays in that browser's local storage. Nothing is sent anywhere.
-- The ranking survives a page refresh. Each browser holds one session at a time.
-- Before starting the next client, copy or download the results, then open **Edit list** and click **Clear everything**.
-- On a shared or client-owned computer, always clear at the end of the session.
+- Everything the interviewer types stays in that browser tab (session storage). Nothing is sent anywhere.
+- The ranking survives a page refresh. Closing the tab clears it, and a new tab or window always opens empty, so one client's list never shows up in front of the next client.
+- Copy the results before closing the tab.
+
+## Use it from a presentation
+
+Put a link on the candidates slide that opens the tool in the browser (for example a button labelled "Open ranking tool"). Links survive export to PDF from PowerPoint, Keynote and Google Slides, and stay clickable in Acrobat, Preview and browser PDF viewers. Point the link at a hosted copy (GitHub Pages or a shared link), not at a file path, which breaks on other people's computers. Share your whole screen, or switch the shared window, when you jump from the deck to the tool. After the call, paste **Copy results** into the readout deck.
+
+Embedding the HTML file inside a PDF is not worth it: most PDF viewers cannot open attachments, and none run the page inside the PDF.
 
 ## Change it
 
-All the code, styles and logic are in `index.html`. Colors and font follow the playbook visual spec in `intake-agent-1` (`plugin/playbook-docx/skills/playbook-docx/renderer/style.py`): navy `#1F3864`, accent `#2E5496`, pale `#D9E2F3`, band `#F2F5FB`, red `#C00000`, Arial. They are CSS variables at the top of the file.
+All the code, styles and logic are in `index.html`. It follows the Agentix Live FDE house style (`ashahid-agentix/fde-house-style`), using the dark deck palette from `tokens/deck.css` (navy `#0E1B33` background, orange `#E86A1F` accent) and Geist / Geist Mono. The colors are CSS variables at the top of the file. The Geist fonts (SIL Open Font License) are embedded as data URIs, copied from the house style's `fonts/` folder, so the page works offline.
