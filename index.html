@@ -3,34 +3,104 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Candidate Ranking</title>
+<title>Agent Rank Tool</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231F3864'/%3E%3Crect x='8' y='8' width='16' height='4' rx='2' fill='%23fff'/%3E%3Crect x='8' y='14' width='12' height='4' rx='2' fill='%23D9E2F3'/%3E%3Crect x='8' y='20' width='8' height='4' rx='2' fill='%23D9E2F3'/%3E%3C/svg%3E">
 <style>
-  /* Palette and font from the playbook renderer's style.py (intake-agent-1). */
+  /* Layout: one centered column; the ranked list is the page.
+     Colors: the playbook palette from intake-agent-1's style.py. Dark is the
+     default; the light theme (html.light) keeps the playbook's own values. */
   :root {
-    --navy: #1F3864;
-    --accent: #2E5496;
-    --pale: #D9E2F3;
-    --band: #F2F5FB;
-    --red: #C00000;
-    --grey: #595959;
-    --ink: #1A1A1A;
-    --white: #FFFFFF;
-    --top-fill: #E8EEF9;
-    --mid-blue: #8EA9DB;
-    --line: #C3D1EA;
-    --star: #D99A00;
+    color-scheme: dark;
+    --bg: #0F1626;
+    --surface: #172136;
+    --panel: #131C2F;
+    --field: #0C1220;
+    --border: #273552;
+    --border-strong: #3A4C73;
+    --text: #E7ECF5;
+    --text-2: #C2CBDB;
+    --muted: #9AA6BE;
+    --faint: #5F6E8D;
+    --icon: #8494B2;
+    --heading: #E3EBFA;
+    --accent: #8AACEB;
+    --accent-soft: #4F6FA8;
+    --btn-bg: #172136;
+    --btn-hover: #1F2C47;
+    --primary: #3A63B5;
+    --primary-hover: #4874CA;
+    --on-primary: #FFFFFF;
+    --top-fill: #1A2947;
+    --top-border: #2E4572;
+    --top-bar: #8AACEB;
+    --top-badge: #8AACEB;
+    --on-top-badge: #0F1626;
+    --badge-bg: #1E2A42;
+    --badge-border: #2E3D5E;
+    --badge-fg: #C9D6EE;
+    --star: #F5B83D;
+    --danger: #FF7B7B;
+    --danger-soft: #5C2B35;
+    --out-bg: #121927;
+    --out-border: #212B3F;
+    --out-text: #747F96;
+    --rule: #26314A;
+    --shadow: rgba(0, 0, 0, 0.55);
+    --scrim: rgba(5, 9, 18, 0.6);
+    --toast-bg: #E7ECF5;
+    --toast-fg: #0F1626;
     --font: Arial, Helvetica, sans-serif;
+  }
+  :root.light {
+    color-scheme: light;
+    --bg: #FFFFFF;
+    --surface: #FFFFFF;
+    --panel: #F2F5FB;
+    --field: #FFFFFF;
+    --border: #D9E2F3;
+    --border-strong: #C3D1EA;
+    --text: #1A1A1A;
+    --text-2: #333333;
+    --muted: #595959;
+    --faint: #A9B6CE;
+    --icon: #7F8CA6;
+    --heading: #1F3864;
+    --accent: #2E5496;
+    --accent-soft: #8EA9DB;
+    --btn-bg: #FFFFFF;
+    --btn-hover: #F2F5FB;
+    --primary: #1F3864;
+    --primary-hover: #2E5496;
+    --on-primary: #FFFFFF;
+    --top-fill: #E8EEF9;
+    --top-border: #C3D1EA;
+    --top-bar: #1F3864;
+    --top-badge: #1F3864;
+    --on-top-badge: #FFFFFF;
+    --badge-bg: #F2F5FB;
+    --badge-border: #D9E2F3;
+    --badge-fg: #1F3864;
+    --star: #D99A00;
+    --danger: #C00000;
+    --danger-soft: #EBC7C7;
+    --out-bg: #FAFAFA;
+    --out-border: #E6E6E6;
+    --out-text: #8A8A8A;
+    --rule: #E3E3E3;
+    --shadow: rgba(31, 56, 100, 0.28);
+    --scrim: rgba(15, 22, 38, 0.45);
+    --toast-bg: #1F3864;
+    --toast-fg: #FFFFFF;
   }
 
   [hidden] { display: none !important; }
   * { box-sizing: border-box; }
-  html { font-size: 16px; -webkit-text-size-adjust: 100%; }
+  html { font-size: 16px; -webkit-text-size-adjust: 100%; background: var(--bg); }
   html.present { font-size: 18px; }
   body {
     margin: 0;
-    background: var(--white);
-    color: var(--ink);
+    background: var(--bg);
+    color: var(--text);
     font-family: var(--font);
     line-height: 1.4;
   }
@@ -50,39 +120,43 @@
     margin: 6px 0 0;
     padding: 2px 0 10px;
     border: 0;
-    border-bottom: 2px solid var(--pale);
+    border-bottom: 2px solid var(--border);
     background: transparent;
-    color: var(--navy);
+    color: var(--heading);
     font: 700 1.9rem/1.2 var(--font);
     outline: none;
   }
-  .title::placeholder { color: #A9B6CE; }
+  .title::placeholder { color: var(--icon); }
   .title:focus { border-bottom-color: var(--accent); }
-  .hint { margin: 12px 0 0; color: var(--grey); font-size: 0.95rem; }
+  .hint { margin: 12px 0 0; color: var(--muted); font-size: 0.95rem; }
   .hint .k-star { color: var(--star); }
-  .hint .k-out { color: var(--red); }
+  .hint .k-out { color: var(--danger); }
 
   /* Buttons */
   button {
     font: 700 0.875rem/1 var(--font);
-    color: var(--navy);
-    background: var(--white);
-    border: 1px solid var(--pale);
+    color: var(--heading);
+    background: var(--btn-bg);
+    border: 1px solid var(--border);
     border-radius: 6px;
     padding: 9px 13px;
     cursor: pointer;
   }
-  button:hover { background: var(--band); border-color: var(--mid-blue); }
+  button:hover { background: var(--btn-hover); border-color: var(--accent-soft); }
   button:focus-visible, .row:focus-visible, .add input:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
   }
-  button:disabled { opacity: 0.45; cursor: default; background: var(--white); border-color: var(--pale); }
-  button.primary { background: var(--navy); border-color: var(--navy); color: var(--white); }
-  button.primary:hover { background: var(--accent); border-color: var(--accent); }
+  button:disabled { opacity: 0.45; cursor: default; background: var(--btn-bg); border-color: var(--border); }
+  button.primary { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
+  button.primary:hover { background: var(--primary-hover); border-color: var(--primary-hover); }
   button.link { border-color: transparent; background: none; color: var(--accent); padding-left: 6px; padding-right: 6px; }
   button.link:hover { text-decoration: underline; }
-  button.danger { color: var(--red); }
+  button.danger { color: var(--danger); }
+  button.armed, button.armed:hover { border-color: var(--danger); color: var(--danger); text-decoration: none; }
+  button.icon-btn { display: inline-grid; place-items: center; width: 38px; height: 34px; padding: 0; }
+  button.icon-btn svg { display: block; }
+  html.light .theme-sun, html:not(.light) .theme-moon { display: none; }
 
   /* Toolbar */
   .toolbar {
@@ -94,32 +168,48 @@
   }
   .toolbar .spacer { flex: 1 1 0; }
   .toolbar .group { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-  .ctl { display: inline-flex; align-items: center; gap: 8px; color: var(--grey); font-size: 0.875rem; }
-  .stepper { display: inline-flex; align-items: center; border: 1px solid var(--pale); border-radius: 6px; overflow: hidden; }
+  .ctl { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 0.875rem; }
+  .stepper { display: inline-flex; align-items: center; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
   .stepper button { border: 0; border-radius: 0; padding: 7px 10px; font-size: 1rem; }
-  .stepper output { min-width: 26px; text-align: center; font-weight: 700; color: var(--navy); }
+  .stepper output { min-width: 26px; text-align: center; font-weight: 700; color: var(--heading); font-variant-numeric: tabular-nums; }
+
+  /* Example notice */
+  .example-note {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 8px;
+    margin: 18px 0 0;
+    padding: 10px 14px;
+    border: 1px dashed var(--border-strong);
+    border-radius: 8px;
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+  .example-note strong { color: var(--heading); }
 
   /* Setup panel */
   .setup {
     margin-top: 24px;
     padding: 20px;
-    background: var(--band);
-    border: 1px solid var(--pale);
+    background: var(--panel);
+    border: 1px solid var(--border);
     border-radius: 10px;
   }
-  .setup h2 { margin: 0 0 6px; color: var(--navy); font-size: 1.2rem; }
-  .setup p { margin: 0 0 12px; color: var(--grey); font-size: 0.9rem; }
+  .setup h2 { margin: 0 0 6px; color: var(--heading); font-size: 1.2rem; }
+  .setup p { margin: 0 0 12px; color: var(--muted); font-size: 0.9rem; }
   .setup textarea {
     width: 100%;
     min-height: 240px;
     padding: 12px 14px;
-    border: 1px solid var(--line);
+    border: 1px solid var(--border-strong);
     border-radius: 8px;
-    background: var(--white);
-    color: var(--ink);
+    background: var(--field);
+    color: var(--text);
     font: 0.95rem/1.5 var(--font);
     resize: vertical;
   }
+  .setup textarea::placeholder { color: var(--icon); }
   .setup textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
   .setup-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; }
   .setup-actions .spacer { flex: 1 1 0; }
@@ -141,33 +231,34 @@
     grid-template-columns: auto auto minmax(0, 1fr) auto;
     align-items: center;
     gap: 14px;
-    padding: 14px 12px 14px 12px;
-    background: var(--white);
-    border: 1px solid var(--pale);
-    border-left: 6px solid var(--pale);
+    padding: 14px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 6px solid var(--border);
     border-radius: 8px;
     cursor: grab;
     user-select: none;
     -webkit-user-select: none;
     touch-action: manipulation;
   }
-  .row:hover { border-color: var(--line); }
+  .row:hover { border-color: var(--border-strong); }
   .badge {
     display: grid;
     place-items: center;
     width: 2.2rem;
     height: 2.2rem;
-    border: 2px solid var(--pale);
+    border: 2px solid var(--badge-border);
     border-radius: 50%;
-    background: var(--band);
-    color: var(--navy);
+    background: var(--badge-bg);
+    color: var(--badge-fg);
     font-size: 1.05rem;
     font-weight: 700;
+    font-variant-numeric: tabular-nums;
   }
-  .grip { display: flex; color: #A9B6CE; touch-action: none; cursor: grab; padding: 4px 0; }
+  .grip { display: flex; color: var(--faint); touch-action: none; cursor: grab; padding: 4px 0; }
   .text { min-width: 0; }
-  .name { color: var(--navy); font-size: 1.1rem; font-weight: 700; overflow-wrap: anywhere; }
-  .summary { margin-top: 3px; color: #333; font-size: 0.95rem; overflow-wrap: anywhere; }
+  .name { color: var(--heading); font-size: 1.1rem; font-weight: 700; overflow-wrap: anywhere; }
+  .summary { margin-top: 3px; color: var(--text-2); font-size: 0.95rem; overflow-wrap: anywhere; }
   .editing {
     cursor: text;
     user-select: text;
@@ -178,10 +269,10 @@
   }
 
   /* Tiers */
-  .row.tier-top { background: var(--top-fill); border-color: var(--line); border-left-color: var(--navy); }
-  .row.tier-top .badge { background: var(--navy); border-color: var(--navy); color: var(--white); }
-  .row.tier-short { border-left-color: var(--mid-blue); }
-  .row.tier-short .badge { background: var(--white); border-color: var(--accent); color: var(--accent); }
+  .row.tier-top { background: var(--top-fill); border-color: var(--top-border); border-left-color: var(--top-bar); }
+  .row.tier-top .badge { background: var(--top-badge); border-color: var(--top-badge); color: var(--on-top-badge); }
+  .row.tier-short { border-left-color: var(--accent-soft); }
+  .row.tier-short .badge { background: var(--surface); border-color: var(--accent); color: var(--accent); }
 
   /* Starred */
   .row.starred { box-shadow: 0 0 0 2px var(--star); }
@@ -194,7 +285,7 @@
     left: -7px;
     right: -1px;
     bottom: -22px;
-    border-top: 2px dashed var(--mid-blue);
+    border-top: 2px dashed var(--accent-soft);
     pointer-events: none;
   }
   .cut-after::before {
@@ -205,7 +296,7 @@
     bottom: -30px;
     transform: translateX(-50%);
     padding: 0 12px;
-    background: var(--white);
+    background: var(--bg);
     color: var(--accent);
     font-size: 0.72rem;
     font-weight: 700;
@@ -227,14 +318,14 @@
     border: 1px solid transparent;
     border-radius: 8px;
     background: transparent;
-    color: #9AA6BD;
+    color: var(--icon);
   }
-  .act:hover { background: var(--white); border-color: var(--pale); color: var(--navy); }
+  .act:hover { background: var(--btn-hover); border-color: var(--border); color: var(--heading); }
   .act svg { display: block; }
   .act.star path { fill: none; stroke: currentColor; }
   .act.star[aria-pressed="true"] { color: var(--star); }
   .act.star[aria-pressed="true"] path { fill: currentColor; }
-  .act.cross:hover, .act.remove:hover { color: var(--red); }
+  .act.cross:hover, .act.remove:hover { color: var(--danger); }
   .row:not(.out) .restore, .row:not(.out) .remove, .row.out .star, .row.out .cross { display: none; }
 
   /* Ruled out */
@@ -244,19 +335,19 @@
     align-items: center;
     gap: 12px;
     margin: 0 0 10px;
-    color: var(--grey);
+    color: var(--muted);
     font-size: 0.75rem;
     font-weight: 700;
     letter-spacing: 0.1em;
     text-transform: uppercase;
   }
-  .section-label::after { content: ""; flex: 1; border-top: 1px solid #E3E3E3; }
-  .row.out { cursor: default; background: #FAFAFA; border-color: #E6E6E6; border-left-color: #E6E6E6; box-shadow: none; }
-  .row.out .badge { background: var(--white); border-color: #EBC7C7; color: var(--red); font-size: 0.95rem; }
+  .section-label::after { content: ""; flex: 1; border-top: 1px solid var(--rule); }
+  .row.out { cursor: default; background: var(--out-bg); border-color: var(--out-border); border-left-color: var(--out-border); box-shadow: none; }
+  .row.out .badge { background: var(--out-bg); border-color: var(--danger-soft); color: var(--danger); font-size: 0.95rem; }
   .row.out .grip { visibility: hidden; }
   .row.out .name, .row.out .summary {
-    color: #8A8A8A;
-    text-decoration: line-through 1.5px var(--red);
+    color: var(--out-text);
+    text-decoration: line-through 1.5px var(--danger);
   }
 
   /* Drag states */
@@ -265,10 +356,10 @@
     z-index: 50;
     margin: 0;
     cursor: grabbing;
-    box-shadow: 0 16px 36px rgba(31, 56, 100, 0.28);
+    box-shadow: 0 16px 36px var(--shadow);
   }
-  .row.lifted.starred { box-shadow: 0 0 0 2px var(--star), 0 16px 36px rgba(31, 56, 100, 0.28); }
-  .placeholder { position: relative; border: 2px dashed var(--mid-blue); border-radius: 8px; background: var(--band); }
+  .row.lifted.starred { box-shadow: 0 0 0 2px var(--star), 0 16px 36px var(--shadow); }
+  .placeholder { position: relative; border: 2px dashed var(--accent-soft); border-radius: 8px; background: var(--panel); }
   body.dragging, body.dragging * { cursor: grabbing !important; }
 
   /* Quick add */
@@ -276,21 +367,46 @@
   .add input {
     width: 100%;
     padding: 13px 14px;
-    border: 1px dashed var(--line);
+    border: 1px dashed var(--border-strong);
     border-radius: 8px;
     background: transparent;
-    color: var(--ink);
+    color: var(--text);
     font: 0.95rem var(--font);
   }
-  .add input::placeholder { color: #8C9AB4; }
-  .add input:focus { border-style: solid; border-color: var(--accent); background: var(--white); outline: none; }
+  .add input::placeholder { color: var(--icon); }
+  .add input:focus { border-style: solid; border-color: var(--accent); background: var(--field); outline: none; }
 
   /* Present mode: hide the controls, keep the list */
-  body.present .toolbar, body.present .setup { display: none !important; }
+  body.present .toolbar, body.present .setup, body.present .example-note { display: none !important; }
   body.present #ranked { margin-top: 24px; }
   body.present .add input:not(:focus) { opacity: 0.5; }
   .exit-present { position: fixed; top: 12px; right: 12px; z-index: 60; opacity: 0.4; }
   .exit-present:hover, .exit-present:focus-visible { opacity: 1; }
+
+  /* Copy fallback, for browsers that refuse clipboard access */
+  .copy-dialog {
+    width: min(640px, calc(100vw - 32px));
+    padding: 20px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+    color: var(--text);
+  }
+  .copy-dialog::backdrop { background: var(--scrim); }
+  .copy-dialog h2 { margin: 0 0 6px; color: var(--heading); font-size: 1.1rem; }
+  .copy-dialog p { margin: 0 0 12px; color: var(--muted); font-size: 0.9rem; }
+  .copy-dialog textarea {
+    width: 100%;
+    height: 240px;
+    padding: 10px 12px;
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    background: var(--field);
+    color: var(--text);
+    font: 0.85rem/1.5 var(--font);
+    resize: vertical;
+  }
+  .copy-dialog .setup-actions { justify-content: flex-end; }
 
   .toast {
     position: fixed;
@@ -299,8 +415,8 @@
     z-index: 70;
     padding: 10px 16px;
     border-radius: 8px;
-    background: var(--navy);
-    color: var(--white);
+    background: var(--toast-bg);
+    color: var(--toast-fg);
     font-size: 0.9rem;
     font-weight: 700;
     transform: translate(-50%, 20px);
@@ -317,12 +433,18 @@
     .title { font-size: 1.5rem; }
   }
 
+  @media (prefers-reduced-motion: reduce) {
+    .toast { transition: none; }
+  }
+
   @media print {
-    .toolbar, .setup, .add, .actions, .exit-present, .toast { display: none !important; }
+    .toolbar, .setup, .add, .actions, .exit-present, .toast, .example-note { display: none !important; }
     .row { break-inside: avoid; }
-    .title { border-bottom-color: var(--pale); }
   }
 </style>
+<script>
+  try { if (localStorage.getItem('agentRankTool:theme') === 'light') document.documentElement.classList.add('light'); } catch (e) { /* storage unavailable */ }
+</script>
 </head>
 <body>
 <div class="wrap">
@@ -347,6 +469,11 @@
   </section>
 
   <div id="board" hidden>
+    <div id="exampleNote" class="example-note" hidden>
+      <span><strong>Example candidates.</strong> Try dragging, starring and crossing out, then paste your own list.</span>
+      <button id="ownBtn" class="link" type="button">Paste your own list</button>
+    </div>
+
     <div class="toolbar" id="toolbar">
       <div class="group">
         <button id="editBtn" type="button">Edit list</button>
@@ -371,7 +498,11 @@
       <div class="group">
         <button id="undoBtn" type="button" title="Undo (Ctrl+Z)" disabled>Undo</button>
         <button id="copyBtn" type="button" title="Copy the ranking as text for your notes">Copy results</button>
-        <button id="csvBtn" type="button" title="Download the ranking as a spreadsheet">CSV</button>
+        <button id="tableBtn" type="button" title="Copy the ranking as a table to paste into Excel or Sheets">Copy table</button>
+        <button id="themeBtn" class="icon-btn" type="button" aria-label="Switch to light theme" title="Switch to light theme">
+          <svg class="theme-sun" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></g></svg>
+          <svg class="theme-moon" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.2 14.6A8.5 8.5 0 0 1 9.4 3.8a8.5 8.5 0 1 0 10.8 10.8z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+        </button>
         <button id="presentBtn" class="primary" type="button" title="Hide the controls for screen sharing">Present</button>
       </div>
     </div>
@@ -388,6 +519,15 @@
   </div>
 </div>
 
+<dialog id="copyDialog" class="copy-dialog" aria-labelledby="copyDialogTitle">
+  <h2 id="copyDialogTitle">Copy the results</h2>
+  <p>This browser blocked automatic copying. The text below is selected: press Ctrl+C (Cmd+C on a Mac) to copy it.</p>
+  <textarea id="copyText" readonly aria-label="Results to copy"></textarea>
+  <div class="setup-actions">
+    <button id="copyClose" class="primary" type="button">Done</button>
+  </div>
+</dialog>
+
 <button id="exitPresent" class="exit-present" type="button" hidden>Exit present (Esc)</button>
 <div id="toast" class="toast" role="status"></div>
 <div id="sr" class="sr-only" aria-live="polite"></div>
@@ -397,6 +537,8 @@
   'use strict';
 
   const STORE_KEY = 'agentRankTool:v1';
+  const THEME_KEY = 'agentRankTool:theme';
+  const APP_NAME = 'Agent Rank Tool';
   const EXAMPLE = [
     'Invoice Matching Agent - Matches incoming invoices to purchase orders and flags mismatches for review.',
     'Customer Inquiry Triage - Reads inbound emails, tags the intent and routes each one to the right team.',
@@ -417,6 +559,7 @@
   };
 
   const $ = (sel) => document.querySelector(sel);
+  const root = document.documentElement;
   const titleEl = $('#title');
   const setup = $('#setup');
   const input = $('#input');
@@ -426,7 +569,9 @@
   const outSection = $('#outSection');
   const addInput = $('#addInput');
   const undoBtn = $('#undoBtn');
+  const themeBtn = $('#themeBtn');
   const exitPresentBtn = $('#exitPresent');
+  const copyDialog = $('#copyDialog');
 
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const els = new Map();
@@ -440,8 +585,6 @@
     const n = Math.round(Number(v));
     return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : dflt;
   };
-
-  let state = load() || { title: '', items: [], topN: 3, cutN: 4 };
 
   // ---------------------------------------------------------------- storage
 
@@ -463,6 +606,7 @@
         })),
         topN,
         cutN: Math.max(topN, clampInt(s.cutN, 1, 20, 4)),
+        example: !!s.example,
       };
     } catch (e) {
       return null;
@@ -539,6 +683,14 @@
     return items.map((i) => (i.summary ? `${i.name} - ${i.summary}` : i.name)).join('\n');
   }
 
+  // First visit: open on a marked example list so the tool shows what it does.
+  let state = load();
+  if (!state) {
+    state = { title: '', items: [], topN: 3, cutN: 4, example: true };
+    applyParsed(parseLines(EXAMPLE));
+    save();
+  }
+
   // ---------------------------------------------------------------- rendering
 
   function normalize() {
@@ -587,6 +739,10 @@
     }
   }
 
+  function setDocTitle() {
+    document.title = state.title ? `${state.title} · ${APP_NAME}` : APP_NAME;
+  }
+
   function render() {
     normalize();
     const focusedId = document.activeElement && document.activeElement.classList.contains('row')
@@ -621,12 +777,13 @@
 
     $('#topN').textContent = state.topN;
     $('#cutN').textContent = state.cutN;
+    $('#exampleNote').hidden = !state.example;
     if (document.activeElement !== titleEl) titleEl.value = state.title;
-    document.title = state.title ? `${state.title} · Candidate Ranking` : 'Candidate Ranking';
+    setDocTitle();
     board.hidden = !setup.hidden;
   }
 
-  // Rank numbers, tier colours and the cut line follow DOM order, so they
+  // Rank numbers, tier colors and the cut line follow DOM order, so they
   // update live while a row is being dragged.
   function applyRanks() {
     const kids = [...ranked.children].filter((el) => !drag || el !== drag.row);
@@ -851,7 +1008,7 @@
     if (!reduceMotion) {
       const to = d.row.getBoundingClientRect();
       d.row.animate(
-        [{ transform: `translate(${from.left - to.left}px, ${from.top - to.top}px)`, boxShadow: '0 16px 36px rgba(31,56,100,.28)' }, { transform: 'none' }],
+        [{ transform: `translate(${from.left - to.left}px, ${from.top - to.top}px)` }, { transform: 'none' }],
         { duration: 180, easing: 'cubic-bezier(.2,.7,.2,1)' },
       );
     }
@@ -925,52 +1082,45 @@
     return lines.join('\n');
   }
 
-  async function copyResults() {
-    const text = resultsText();
-    try {
-      await navigator.clipboard.writeText(text);
-      toast('Ranking copied to clipboard');
-    } catch (e) {
-      const ta = document.createElement('textarea');
-      ta.value = text;
-      ta.style.position = 'fixed';
-      ta.style.opacity = '0';
-      document.body.appendChild(ta);
-      ta.select();
-      const ok = document.execCommand('copy');
-      ta.remove();
-      toast(ok ? 'Ranking copied to clipboard' : 'Copy failed. Try the CSV download.');
-    }
+  // Tab-separated, so it lands in separate cells when pasted into Excel or
+  // Sheets. Cells starting with = + - @ are prefixed so they stay text.
+  function tableCell(v) {
+    let s = String(v == null ? '' : v).replace(/[\t\r\n]+/g, ' ');
+    if (/^[=+\-@]/.test(s)) s = `'${s}`;
+    return s;
   }
 
-  // Cells starting with = + - @ are prefixed so spreadsheets don't run them as formulas.
-  function csvCell(v) {
-    let s = String(v == null ? '' : v);
-    if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`;
-    return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-  }
-
-  function downloadCsv() {
+  function tableText() {
     const rows = [['Rank', 'Name', 'Summary', 'Starred', 'Tier']];
     activeItems().forEach((item, i) => rows.push([i + 1, item.name, item.summary, item.starred ? 'Yes' : '', tierLabel(i + 1)]));
     for (const item of state.items.filter((i) => i.out)) rows.push(['', item.name, item.summary, '', 'Ruled out']);
-    const csv = rows.map((r) => r.map(csvCell).join(',')).join('\r\n');
-    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
-    const slug = state.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-    const day = new Date().toISOString().slice(0, 10);
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `candidate-ranking${slug ? `-${slug}` : ''}-${day}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    return rows.map((r) => r.map(tableCell).join('\t')).join('\n');
+  }
+
+  // writeText is called straight from the click so the browser counts it as
+  // user-initiated. If the browser refuses, show the text ready to copy by hand.
+  function copyText(text, done) {
+    let attempt;
+    try {
+      attempt = navigator.clipboard.writeText(text);
+    } catch (e) {
+      attempt = Promise.reject(e);
+    }
+    attempt.then(() => toast(done), () => showCopyDialog(text));
+  }
+
+  function showCopyDialog(text) {
+    const area = $('#copyText');
+    area.value = text;
+    copyDialog.showModal();
+    area.focus();
+    area.select();
   }
 
   // ---------------------------------------------------------------- setup panel
 
-  function openSetup() {
-    input.value = toText(state.items);
+  function openSetup(blank) {
+    input.value = blank ? '' : toText(state.items);
     const hasItems = state.items.length > 0;
     $('#buildBtn').textContent = hasItems ? 'Update list' : 'Build ranking';
     $('#cancelBtn').hidden = !hasItems;
@@ -985,46 +1135,69 @@
     render();
   }
 
+  // Two-click confirm. Browser confirm() dialogs are blocked in some hosts.
+  function confirmClick(btn, question, needsConfirm, action) {
+    const label = btn.textContent;
+    let timer = null;
+    const reset = () => {
+      clearTimeout(timer);
+      delete btn.dataset.armed;
+      btn.textContent = label;
+      btn.classList.remove('armed');
+    };
+    btn.addEventListener('click', () => {
+      if (btn.dataset.armed || !needsConfirm()) { reset(); action(); return; }
+      btn.dataset.armed = '1';
+      btn.textContent = question;
+      btn.classList.add('armed');
+      timer = setTimeout(reset, 4000);
+    });
+    btn.addEventListener('blur', reset);
+  }
+
   $('#buildBtn').addEventListener('click', () => {
     const parsed = parseLines(input.value);
     if (!parsed.length) { toast('Add at least one candidate'); input.focus(); return; }
     if (state.items.length) checkpoint();
     applyParsed(parsed);
+    state.example = false;
     save();
     closeSetup();
   });
   $('#cancelBtn').addEventListener('click', closeSetup);
-  $('#exampleBtn').addEventListener('click', () => {
-    if (input.value.trim() && !window.confirm('Replace the text box with the example candidates?')) return;
+  confirmClick($('#exampleBtn'), 'Replace your text? Click again', () => input.value.trim() !== '', () => {
     input.value = EXAMPLE;
     input.focus();
   });
-  $('#clearBtn').addEventListener('click', () => {
-    if (!window.confirm('Clear the title and every candidate? You can undo this until you close the page.')) return;
+  confirmClick($('#clearBtn'), 'Click again to clear everything', () => true, () => {
     if (state.items.length) checkpoint();
     state.items = [];
     state.title = '';
+    state.example = false;
     titleEl.value = '';
     save();
     render();
-    openSetup();
+    openSetup(true);
   });
 
   // ---------------------------------------------------------------- wiring
 
   titleEl.addEventListener('input', () => {
     state.title = titleEl.value;
-    document.title = state.title ? `${state.title} · Candidate Ranking` : 'Candidate Ranking';
+    setDocTitle();
     save();
   });
   titleEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') titleEl.blur(); });
 
-  $('#editBtn').addEventListener('click', openSetup);
+  $('#editBtn').addEventListener('click', () => openSetup(false));
+  $('#ownBtn').addEventListener('click', () => openSetup(true));
   undoBtn.addEventListener('click', undo);
-  $('#copyBtn').addEventListener('click', copyResults);
-  $('#csvBtn').addEventListener('click', downloadCsv);
+  $('#copyBtn').addEventListener('click', () => copyText(resultsText(), 'Ranking copied as text'));
+  $('#tableBtn').addEventListener('click', () => copyText(tableText(), 'Table copied. Paste it into Excel or Sheets.'));
+  $('#copyClose').addEventListener('click', () => copyDialog.close());
   $('#presentBtn').addEventListener('click', () => setPresent(true));
   exitPresentBtn.addEventListener('click', () => setPresent(false));
+  themeBtn.addEventListener('click', () => setTheme(!root.classList.contains('light')));
 
   for (const st of document.querySelectorAll('[data-stepper]')) {
     st.addEventListener('click', (e) => {
@@ -1065,10 +1238,10 @@
   board.addEventListener('keydown', (e) => {
     const row = e.target;
     if (!row.classList || !row.classList.contains('row')) return;
+    if (e.ctrlKey || e.metaKey) return;
     const id = row.dataset.id;
     const item = find(id);
     const key = e.key;
-    if (e.ctrlKey || e.metaKey) return;
     if ((key === 'ArrowUp' || key === 'ArrowDown') && e.altKey) {
       e.preventDefault();
       if (!item.out) move(id, key === 'ArrowUp' ? -1 : 1);
@@ -1096,6 +1269,7 @@
   document.addEventListener('keydown', (e) => {
     const typing = e.target.closest && e.target.closest('input, textarea, .editing');
     if (e.key === 'Escape' && drag && drag.started) { endDrag(false); return; }
+    if (copyDialog.open) return;
     if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'z' && !typing && setup.hidden) {
       e.preventDefault();
       undo();
@@ -1105,10 +1279,22 @@
   });
 
   function setPresent(on) {
-    document.documentElement.classList.toggle('present', on);
+    root.classList.toggle('present', on);
     document.body.classList.toggle('present', on);
     exitPresentBtn.hidden = !on;
     if (on) toast('Present mode. Press Esc to exit.');
+  }
+
+  function themeLabel() {
+    const label = root.classList.contains('light') ? 'Switch to dark theme' : 'Switch to light theme';
+    themeBtn.setAttribute('aria-label', label);
+    themeBtn.title = label;
+  }
+
+  function setTheme(light) {
+    root.classList.toggle('light', light);
+    themeLabel();
+    try { localStorage.setItem(THEME_KEY, light ? 'light' : 'dark'); } catch (e) { /* storage unavailable */ }
   }
 
   let toastTimer;
@@ -1117,16 +1303,17 @@
     t.textContent = msg;
     t.classList.add('show');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => t.classList.remove('show'), 2000);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
   }
 
   function announce(msg) { $('#sr').textContent = msg; }
 
   // ---------------------------------------------------------------- start
 
+  themeLabel();
   normalize();
-  if (state.items.length) render();
-  else { render(); openSetup(); }
+  render();
+  if (!state.items.length) openSetup(true);
 })();
 </script>
 </body>
