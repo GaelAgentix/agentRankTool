@@ -1,0 +1,1133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Candidate Ranking</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231F3864'/%3E%3Crect x='8' y='8' width='16' height='4' rx='2' fill='%23fff'/%3E%3Crect x='8' y='14' width='12' height='4' rx='2' fill='%23D9E2F3'/%3E%3Crect x='8' y='20' width='8' height='4' rx='2' fill='%23D9E2F3'/%3E%3C/svg%3E">
+<style>
+  /* Palette and font from the playbook renderer's style.py (intake-agent-1). */
+  :root {
+    --navy: #1F3864;
+    --accent: #2E5496;
+    --pale: #D9E2F3;
+    --band: #F2F5FB;
+    --red: #C00000;
+    --grey: #595959;
+    --ink: #1A1A1A;
+    --white: #FFFFFF;
+    --top-fill: #E8EEF9;
+    --mid-blue: #8EA9DB;
+    --line: #C3D1EA;
+    --star: #D99A00;
+    --font: Arial, Helvetica, sans-serif;
+  }
+
+  [hidden] { display: none !important; }
+  * { box-sizing: border-box; }
+  html { font-size: 16px; -webkit-text-size-adjust: 100%; }
+  html.present { font-size: 18px; }
+  body {
+    margin: 0;
+    background: var(--white);
+    color: var(--ink);
+    font-family: var(--font);
+    line-height: 1.4;
+  }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 32px 16px 72px; }
+
+  /* Masthead */
+  .eyebrow {
+    color: var(--accent);
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .title {
+    display: block;
+    width: 100%;
+    margin: 6px 0 0;
+    padding: 2px 0 10px;
+    border: 0;
+    border-bottom: 2px solid var(--pale);
+    background: transparent;
+    color: var(--navy);
+    font: 700 1.9rem/1.2 var(--font);
+    outline: none;
+  }
+  .title::placeholder { color: #A9B6CE; }
+  .title:focus { border-bottom-color: var(--accent); }
+  .hint { margin: 12px 0 0; color: var(--grey); font-size: 0.95rem; }
+  .hint .k-star { color: var(--star); }
+  .hint .k-out { color: var(--red); }
+
+  /* Buttons */
+  button {
+    font: 700 0.875rem/1 var(--font);
+    color: var(--navy);
+    background: var(--white);
+    border: 1px solid var(--pale);
+    border-radius: 6px;
+    padding: 9px 13px;
+    cursor: pointer;
+  }
+  button:hover { background: var(--band); border-color: var(--mid-blue); }
+  button:focus-visible, .row:focus-visible, .add input:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  button:disabled { opacity: 0.45; cursor: default; background: var(--white); border-color: var(--pale); }
+  button.primary { background: var(--navy); border-color: var(--navy); color: var(--white); }
+  button.primary:hover { background: var(--accent); border-color: var(--accent); }
+  button.link { border-color: transparent; background: none; color: var(--accent); padding-left: 6px; padding-right: 6px; }
+  button.link:hover { text-decoration: underline; }
+  button.danger { color: var(--red); }
+
+  /* Toolbar */
+  .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 18px;
+    margin: 22px 0 20px;
+  }
+  .toolbar .spacer { flex: 1 1 0; }
+  .toolbar .group { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .ctl { display: inline-flex; align-items: center; gap: 8px; color: var(--grey); font-size: 0.875rem; }
+  .stepper { display: inline-flex; align-items: center; border: 1px solid var(--pale); border-radius: 6px; overflow: hidden; }
+  .stepper button { border: 0; border-radius: 0; padding: 7px 10px; font-size: 1rem; }
+  .stepper output { min-width: 26px; text-align: center; font-weight: 700; color: var(--navy); }
+
+  /* Setup panel */
+  .setup {
+    margin-top: 24px;
+    padding: 20px;
+    background: var(--band);
+    border: 1px solid var(--pale);
+    border-radius: 10px;
+  }
+  .setup h2 { margin: 0 0 6px; color: var(--navy); font-size: 1.2rem; }
+  .setup p { margin: 0 0 12px; color: var(--grey); font-size: 0.9rem; }
+  .setup textarea {
+    width: 100%;
+    min-height: 240px;
+    padding: 12px 14px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--white);
+    color: var(--ink);
+    font: 0.95rem/1.5 var(--font);
+    resize: vertical;
+  }
+  .setup textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .setup-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; }
+  .setup-actions .spacer { flex: 1 1 0; }
+  .setup .note { margin: 12px 0 0; font-size: 0.8rem; }
+
+  /* Rows */
+  .list {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .row {
+    position: relative;
+    display: grid;
+    grid-template-columns: auto auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 12px 14px 12px;
+    background: var(--white);
+    border: 1px solid var(--pale);
+    border-left: 6px solid var(--pale);
+    border-radius: 8px;
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+  }
+  .row:hover { border-color: var(--line); }
+  .badge {
+    display: grid;
+    place-items: center;
+    width: 2.2rem;
+    height: 2.2rem;
+    border: 2px solid var(--pale);
+    border-radius: 50%;
+    background: var(--band);
+    color: var(--navy);
+    font-size: 1.05rem;
+    font-weight: 700;
+  }
+  .grip { display: flex; color: #A9B6CE; touch-action: none; cursor: grab; padding: 4px 0; }
+  .text { min-width: 0; }
+  .name { color: var(--navy); font-size: 1.1rem; font-weight: 700; overflow-wrap: anywhere; }
+  .summary { margin-top: 3px; color: #333; font-size: 0.95rem; overflow-wrap: anywhere; }
+  .editing {
+    cursor: text;
+    user-select: text;
+    -webkit-user-select: text;
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+    border-radius: 3px;
+  }
+
+  /* Tiers */
+  .row.tier-top { background: var(--top-fill); border-color: var(--line); border-left-color: var(--navy); }
+  .row.tier-top .badge { background: var(--navy); border-color: var(--navy); color: var(--white); }
+  .row.tier-short { border-left-color: var(--mid-blue); }
+  .row.tier-short .badge { background: var(--white); border-color: var(--accent); color: var(--accent); }
+
+  /* Starred */
+  .row.starred { box-shadow: 0 0 0 2px var(--star); }
+
+  /* Cut line, drawn below the last row above the cut */
+  .cut-after { margin-bottom: 30px; }
+  .cut-after::after {
+    content: "";
+    position: absolute;
+    left: -7px;
+    right: -1px;
+    bottom: -22px;
+    border-top: 2px dashed var(--mid-blue);
+    pointer-events: none;
+  }
+  .cut-after::before {
+    content: attr(data-cut);
+    position: absolute;
+    z-index: 1;
+    left: 50%;
+    bottom: -30px;
+    transform: translateX(-50%);
+    padding: 0 12px;
+    background: var(--white);
+    color: var(--accent);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    line-height: 16px;
+    text-transform: uppercase;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+
+  /* Row actions */
+  .actions { display: flex; gap: 2px; }
+  .act {
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: transparent;
+    color: #9AA6BD;
+  }
+  .act:hover { background: var(--white); border-color: var(--pale); color: var(--navy); }
+  .act svg { display: block; }
+  .act.star path { fill: none; stroke: currentColor; }
+  .act.star[aria-pressed="true"] { color: var(--star); }
+  .act.star[aria-pressed="true"] path { fill: currentColor; }
+  .act.cross:hover, .act.remove:hover { color: var(--red); }
+  .row:not(.out) .restore, .row:not(.out) .remove, .row.out .star, .row.out .cross { display: none; }
+
+  /* Ruled out */
+  .out-section { margin-top: 36px; }
+  .section-label {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0 0 10px;
+    color: var(--grey);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .section-label::after { content: ""; flex: 1; border-top: 1px solid #E3E3E3; }
+  .row.out { cursor: default; background: #FAFAFA; border-color: #E6E6E6; border-left-color: #E6E6E6; box-shadow: none; }
+  .row.out .badge { background: var(--white); border-color: #EBC7C7; color: var(--red); font-size: 0.95rem; }
+  .row.out .grip { visibility: hidden; }
+  .row.out .name, .row.out .summary {
+    color: #8A8A8A;
+    text-decoration: line-through 1.5px var(--red);
+  }
+
+  /* Drag states */
+  .row.lifted {
+    position: fixed;
+    z-index: 50;
+    margin: 0;
+    cursor: grabbing;
+    box-shadow: 0 16px 36px rgba(31, 56, 100, 0.28);
+  }
+  .row.lifted.starred { box-shadow: 0 0 0 2px var(--star), 0 16px 36px rgba(31, 56, 100, 0.28); }
+  .placeholder { position: relative; border: 2px dashed var(--mid-blue); border-radius: 8px; background: var(--band); }
+  body.dragging, body.dragging * { cursor: grabbing !important; }
+
+  /* Quick add */
+  .add { margin-top: 14px; }
+  .add input {
+    width: 100%;
+    padding: 13px 14px;
+    border: 1px dashed var(--line);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--ink);
+    font: 0.95rem var(--font);
+  }
+  .add input::placeholder { color: #8C9AB4; }
+  .add input:focus { border-style: solid; border-color: var(--accent); background: var(--white); outline: none; }
+
+  /* Present mode: hide the controls, keep the list */
+  body.present .toolbar, body.present .setup { display: none !important; }
+  body.present #ranked { margin-top: 24px; }
+  body.present .add input:not(:focus) { opacity: 0.5; }
+  .exit-present { position: fixed; top: 12px; right: 12px; z-index: 60; opacity: 0.4; }
+  .exit-present:hover, .exit-present:focus-visible { opacity: 1; }
+
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: 24px;
+    z-index: 70;
+    padding: 10px 16px;
+    border-radius: 8px;
+    background: var(--navy);
+    color: var(--white);
+    font-size: 0.9rem;
+    font-weight: 700;
+    transform: translate(-50%, 20px);
+    opacity: 0;
+    transition: opacity 0.2s, transform 0.2s;
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+  @media (max-width: 600px) {
+    .row { gap: 8px; padding: 12px 6px 12px 8px; }
+    .act { width: 34px; height: 34px; }
+    .title { font-size: 1.5rem; }
+  }
+
+  @media print {
+    .toolbar, .setup, .add, .actions, .exit-present, .toast { display: none !important; }
+    .row { break-inside: avoid; }
+    .title { border-bottom-color: var(--pale); }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Automation candidate ranking</div>
+    <input id="title" class="title" type="text" placeholder="Session title, e.g. client name" aria-label="Session title" autocomplete="off">
+    <p class="hint">Drag to rank. <span class="k-star">&#9733;</span> marks a favorite, <span class="k-out">&#10005;</span> rules one out.</p>
+  </header>
+
+  <section id="setup" class="setup" hidden>
+    <h2>Candidates</h2>
+    <p>One per line: the name, then a dash, colon or tab, then a one-sentence summary. Bullets and numbering are ignored, so you can paste a list straight from your notes.</p>
+    <textarea id="input" spellcheck="true" aria-label="Candidates, one per line" placeholder="Invoice Matching Agent - Matches incoming invoices to purchase orders and flags mismatches.&#10;Customer Inquiry Triage - Reads inbound emails, tags the intent and routes each one to the right team.&#10;Weekly KPI Report Builder: Pulls numbers from source systems and drafts the leadership report."></textarea>
+    <div class="setup-actions">
+      <button id="buildBtn" class="primary" type="button">Build ranking</button>
+      <button id="cancelBtn" type="button">Cancel</button>
+      <button id="exampleBtn" class="link" type="button">Load example</button>
+      <span class="spacer"></span>
+      <button id="clearBtn" class="link danger" type="button">Clear everything</button>
+    </div>
+    <p class="note">Everything stays in this browser. Nothing is uploaded.</p>
+  </section>
+
+  <div id="board" hidden>
+    <div class="toolbar" id="toolbar">
+      <div class="group">
+        <button id="editBtn" type="button">Edit list</button>
+      </div>
+      <div class="group">
+        <span class="ctl">Highlight top
+          <span class="stepper" data-stepper="topN">
+            <button type="button" data-step="-1" aria-label="Highlight fewer">&minus;</button>
+            <output id="topN" aria-live="polite">3</output>
+            <button type="button" data-step="1" aria-label="Highlight more">+</button>
+          </span>
+        </span>
+        <span class="ctl">Cut line after
+          <span class="stepper" data-stepper="cutN">
+            <button type="button" data-step="-1" aria-label="Move cut line up">&minus;</button>
+            <output id="cutN" aria-live="polite">4</output>
+            <button type="button" data-step="1" aria-label="Move cut line down">+</button>
+          </span>
+        </span>
+      </div>
+      <span class="spacer"></span>
+      <div class="group">
+        <button id="undoBtn" type="button" title="Undo (Ctrl+Z)" disabled>Undo</button>
+        <button id="copyBtn" type="button" title="Copy the ranking as text for your notes">Copy results</button>
+        <button id="csvBtn" type="button" title="Download the ranking as a spreadsheet">CSV</button>
+        <button id="presentBtn" class="primary" type="button" title="Hide the controls for screen sharing">Present</button>
+      </div>
+    </div>
+
+    <ol id="ranked" class="list" aria-label="Ranked candidates"></ol>
+    <div class="add">
+      <input id="addInput" type="text" autocomplete="off" aria-label="Add a candidate" placeholder="+ Add a candidate (Name - summary), then press Enter">
+    </div>
+
+    <section id="outSection" class="out-section" hidden>
+      <h3 class="section-label">Ruled out</h3>
+      <ul id="outList" class="list" aria-label="Ruled out candidates"></ul>
+    </section>
+  </div>
+</div>
+
+<button id="exitPresent" class="exit-present" type="button" hidden>Exit present (Esc)</button>
+<div id="toast" class="toast" role="status"></div>
+<div id="sr" class="sr-only" aria-live="polite"></div>
+
+<script>
+(() => {
+  'use strict';
+
+  const STORE_KEY = 'agentRankTool:v1';
+  const EXAMPLE = [
+    'Invoice Matching Agent - Matches incoming invoices to purchase orders and flags mismatches for review.',
+    'Customer Inquiry Triage - Reads inbound emails, tags the intent and routes each one to the right team.',
+    'Contract Renewal Tracker - Watches contract end dates and drafts renewal reminders with the key terms.',
+    'Meeting Notes Summarizer - Turns call recordings into action items and posts them to the project channel.',
+    'Onboarding Paperwork Assistant - Collects new-hire documents and chases anything that is missing.',
+    'Weekly KPI Report Builder - Pulls numbers from source systems and drafts the weekly leadership report.',
+    'Purchase Request Checker - Checks requests against policy and budget, then routes them for approval.',
+    'Policy Answer Bot - Answers internal how-to questions from existing policies and SOPs.',
+  ].join('\n');
+
+  const ICONS = {
+    grip: '<svg width="12" height="20" viewBox="0 0 12 20" aria-hidden="true"><g fill="currentColor"><circle cx="3" cy="4" r="1.6"/><circle cx="9" cy="4" r="1.6"/><circle cx="3" cy="10" r="1.6"/><circle cx="9" cy="10" r="1.6"/><circle cx="3" cy="16" r="1.6"/><circle cx="9" cy="16" r="1.6"/></g></svg>',
+    star: '<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.8l2.83 5.73 6.33.92-4.58 4.46 1.08 6.3L12 17.24l-5.66 2.97 1.08-6.3-4.58-4.46 6.33-.92z" stroke-width="1.8" stroke-linejoin="round"/></svg>',
+    cross: '<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>',
+    restore: '<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.35-5.65M4 4v4.5h4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    remove: '<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M10 7V4.5h4V7M7 7l1 12.5h8L17 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  };
+
+  const $ = (sel) => document.querySelector(sel);
+  const titleEl = $('#title');
+  const setup = $('#setup');
+  const input = $('#input');
+  const board = $('#board');
+  const ranked = $('#ranked');
+  const outList = $('#outList');
+  const outSection = $('#outSection');
+  const addInput = $('#addInput');
+  const undoBtn = $('#undoBtn');
+  const exitPresentBtn = $('#exitPresent');
+
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const els = new Map();
+  const history = [];
+  let seq = 0;
+  let drag = null;
+  let placeholder = null;
+
+  const uid = () => 'c' + Date.now().toString(36) + (seq++).toString(36);
+  const clampInt = (v, lo, hi, dflt) => {
+    const n = Math.round(Number(v));
+    return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : dflt;
+  };
+
+  let state = load() || { title: '', items: [], topN: 3, cutN: 4 };
+
+  // ---------------------------------------------------------------- storage
+
+  function load() {
+    try {
+      const raw = localStorage.getItem(STORE_KEY);
+      if (!raw) return null;
+      const s = JSON.parse(raw);
+      if (!s || !Array.isArray(s.items)) return null;
+      const topN = clampInt(s.topN, 1, 20, 3);
+      return {
+        title: String(s.title || ''),
+        items: s.items.filter((i) => i && i.name).map((i) => ({
+          id: String(i.id || uid()),
+          name: String(i.name),
+          summary: String(i.summary || ''),
+          starred: !!i.starred,
+          out: !!i.out,
+        })),
+        topN,
+        cutN: Math.max(topN, clampInt(s.cutN, 1, 20, 4)),
+      };
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function save() {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* storage unavailable */ }
+  }
+
+  // ---------------------------------------------------------------- undo
+
+  function checkpoint() {
+    history.push(JSON.stringify({ items: state.items, topN: state.topN, cutN: state.cutN }));
+    if (history.length > 100) history.shift();
+    undoBtn.disabled = false;
+  }
+
+  function undo() {
+    const snap = history.pop();
+    undoBtn.disabled = history.length === 0;
+    if (!snap) return;
+    Object.assign(state, JSON.parse(snap));
+    save();
+    render();
+    toast('Undone');
+  }
+
+  // ---------------------------------------------------------------- parsing
+
+  // "Name - summary", "Name: summary", "Name | summary", "Name<TAB>summary",
+  // "Name — summary". A plain hyphen needs spaces around it so names like
+  // "Follow-up Agent" survive.
+  const SPLIT = /^(.+?)\s*(?:\t|\s-+\s|[–—]|:\s|\|)\s*(.*)$/;
+
+  function parseLines(text) {
+    const parsed = [];
+    for (const raw of text.split(/\r?\n/)) {
+      const line = raw.trim()
+        .replace(/^\|\s*|\s*\|$/g, '')
+        .replace(/^(?:[-*]\s+|[•▪◦]\s*|\d+[.)]\s+|\(\d+\)\s+)/, '')
+        .trim();
+      if (!line || /^[-|:\s]+$/.test(line)) continue;
+      const m = line.match(SPLIT);
+      let name = m ? m[1] : line.replace(/\s*[:|–—-]+\s*$/, '');
+      let summary = m ? m[2] : '';
+      name = name.replace(/\*\*|__/g, '').trim();
+      summary = summary.replace(/\*\*|__/g, '').replace(/\s+/g, ' ').trim();
+      if (name) parsed.push({ name, summary });
+    }
+    return parsed;
+  }
+
+  const nameKey = (s) => s.toLowerCase().replace(/\s+/g, ' ').trim();
+
+  // The text box order becomes the list order. Lines whose name matches an
+  // existing candidate keep its star and ruled-out state.
+  function applyParsed(parsed) {
+    const pool = new Map();
+    for (const item of state.items) {
+      const k = nameKey(item.name);
+      if (!pool.has(k)) pool.set(k, []);
+      pool.get(k).push(item);
+    }
+    state.items = parsed.map((p) => {
+      const existing = (pool.get(nameKey(p.name)) || []).shift();
+      return existing
+        ? { ...existing, name: p.name, summary: p.summary }
+        : { id: uid(), name: p.name, summary: p.summary, starred: false, out: false };
+    });
+  }
+
+  function toText(items) {
+    return items.map((i) => (i.summary ? `${i.name} - ${i.summary}` : i.name)).join('\n');
+  }
+
+  // ---------------------------------------------------------------- rendering
+
+  function normalize() {
+    state.items = [...state.items.filter((i) => !i.out), ...state.items.filter((i) => i.out)];
+  }
+
+  function createRow(item) {
+    const li = document.createElement('li');
+    li.className = 'row';
+    li.dataset.id = item.id;
+    li.tabIndex = 0;
+    li.innerHTML =
+      '<span class="badge"></span>' +
+      `<span class="grip" title="Drag to reorder">${ICONS.grip}</span>` +
+      '<div class="text"><div class="name"></div><div class="summary"></div></div>' +
+      '<div class="actions">' +
+      `<button type="button" class="act star" title="Star (S)">${ICONS.star}</button>` +
+      `<button type="button" class="act cross" title="Rule out (X)">${ICONS.cross}</button>` +
+      `<button type="button" class="act restore" title="Bring back (X)">${ICONS.restore}</button>` +
+      `<button type="button" class="act remove" title="Delete (Del)">${ICONS.remove}</button>` +
+      '</div>';
+    return li;
+  }
+
+  function updateRow(li, item) {
+    const name = li.querySelector('.name');
+    const summary = li.querySelector('.summary');
+    if (!name.classList.contains('editing')) name.textContent = item.name;
+    if (!summary.classList.contains('editing')) summary.textContent = item.summary;
+    summary.hidden = !item.summary;
+    li.classList.toggle('starred', item.starred);
+    li.classList.toggle('out', item.out);
+    const star = li.querySelector('.star');
+    star.setAttribute('aria-pressed', String(item.starred));
+    star.setAttribute('aria-label', `${item.starred ? 'Unstar' : 'Star'} ${item.name}`);
+    li.querySelector('.cross').setAttribute('aria-label', `Rule out ${item.name}`);
+    li.querySelector('.restore').setAttribute('aria-label', `Bring back ${item.name}`);
+    li.querySelector('.remove').setAttribute('aria-label', `Delete ${item.name}`);
+  }
+
+  function syncList(parent, wanted) {
+    let ref = parent.firstChild;
+    for (const el of wanted) {
+      if (el === ref) ref = ref.nextSibling;
+      else parent.insertBefore(el, ref);
+    }
+  }
+
+  function render() {
+    normalize();
+    const focusedId = document.activeElement && document.activeElement.classList.contains('row')
+      ? document.activeElement.dataset.id : null;
+    const live = new Set(state.items.map((i) => i.id));
+    const created = [];
+
+    flip(() => {
+      for (const [id, el] of els) {
+        if (!live.has(id)) { el.remove(); els.delete(id); }
+      }
+      const active = [];
+      const out = [];
+      for (const item of state.items) {
+        let el = els.get(item.id);
+        if (!el) { el = createRow(item); els.set(item.id, el); created.push(el); }
+        updateRow(el, item);
+        (item.out ? out : active).push(el);
+      }
+      syncList(ranked, active);
+      syncList(outList, out);
+      outSection.hidden = out.length === 0;
+      applyRanks();
+    });
+
+    if (!reduceMotion) {
+      for (const el of created) el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 200 });
+    }
+    if (focusedId && els.has(focusedId) && document.activeElement !== els.get(focusedId)) {
+      els.get(focusedId).focus({ preventScroll: true });
+    }
+
+    $('#topN').textContent = state.topN;
+    $('#cutN').textContent = state.cutN;
+    if (document.activeElement !== titleEl) titleEl.value = state.title;
+    document.title = state.title ? `${state.title} · Candidate Ranking` : 'Candidate Ranking';
+    board.hidden = !setup.hidden;
+  }
+
+  // Rank numbers, tier colours and the cut line follow DOM order, so they
+  // update live while a row is being dragged.
+  function applyRanks() {
+    const kids = [...ranked.children].filter((el) => !drag || el !== drag.row);
+    const total = kids.length;
+    kids.forEach((el, i) => {
+      const rank = i + 1;
+      const row = el === placeholder ? drag.row : el;
+      row.querySelector('.badge').textContent = rank;
+      row.classList.toggle('tier-top', rank <= state.topN);
+      row.classList.toggle('tier-short', rank > state.topN && rank <= state.cutN);
+      const cut = rank === state.cutN && rank < total;
+      el.classList.toggle('cut-after', cut);
+      if (cut) el.dataset.cut = `Top ${state.cutN}`;
+    });
+    if (drag) drag.row.classList.remove('cut-after');
+    for (const el of outList.children) {
+      el.querySelector('.badge').textContent = '✕';
+      el.classList.remove('tier-top', 'tier-short', 'cut-after');
+    }
+  }
+
+  // FLIP: measure, change the DOM, then slide each moved row from where it was.
+  function flip(change) {
+    const before = new Map();
+    for (const el of document.querySelectorAll('.list > li')) before.set(el, el.getBoundingClientRect());
+    change();
+    if (reduceMotion) return;
+    for (const [el, r0] of before) {
+      if (!el.isConnected || (drag && el === drag.row)) continue;
+      const r1 = el.getBoundingClientRect();
+      if (Math.abs(r0.top - r1.top) < 0.5 && Math.abs(r0.left - r1.left) < 0.5) continue;
+      el.getAnimations().forEach((a) => a.cancel());
+      const r2 = el.getBoundingClientRect();
+      el.animate(
+        [{ transform: `translate(${r0.left - r2.left}px, ${r0.top - r2.top}px)` }, { transform: 'none' }],
+        { duration: 220, easing: 'cubic-bezier(.2,.7,.2,1)' },
+      );
+    }
+  }
+
+  // ---------------------------------------------------------------- actions
+
+  const find = (id) => state.items.find((i) => i.id === id);
+  const activeItems = () => state.items.filter((i) => !i.out);
+
+  function toggleStar(id) {
+    const item = find(id);
+    if (!item || item.out) return;
+    checkpoint();
+    item.starred = !item.starred;
+    save();
+    render();
+    announce(`${item.name} ${item.starred ? 'starred' : 'unstarred'}`);
+  }
+
+  // Ruled-out rows go to the top of the "Ruled out" list; restored rows go to
+  // the bottom of the ranking.
+  function setOut(id, out) {
+    const item = find(id);
+    if (!item || item.out === out) return;
+    checkpoint();
+    state.items = state.items.filter((i) => i !== item);
+    item.out = out;
+    state.items.splice(activeItems().length, 0, item);
+    save();
+    render();
+    announce(`${item.name} ${out ? 'ruled out' : 'brought back'}`);
+  }
+
+  function removeItem(id) {
+    const item = find(id);
+    if (!item) return;
+    checkpoint();
+    state.items = state.items.filter((i) => i !== item);
+    save();
+    render();
+    toast(`Deleted ${item.name}. Undo with Ctrl+Z.`);
+  }
+
+  function move(id, delta) {
+    const active = activeItems();
+    const from = active.findIndex((i) => i.id === id);
+    const to = from + delta;
+    if (from < 0 || to < 0 || to >= active.length) return;
+    checkpoint();
+    const [item] = active.splice(from, 1);
+    active.splice(to, 0, item);
+    state.items = [...active, ...state.items.filter((i) => i.out)];
+    save();
+    render();
+    announce(`${item.name} moved to rank ${to + 1}`);
+  }
+
+  function setStep(which, delta) {
+    let { topN, cutN } = state;
+    if (which === 'topN') {
+      topN = clampInt(topN + delta, 1, 20, topN);
+      cutN = Math.max(cutN, topN);
+    } else {
+      cutN = clampInt(cutN + delta, 1, 20, cutN);
+      topN = Math.min(topN, cutN);
+    }
+    if (topN === state.topN && cutN === state.cutN) return;
+    checkpoint();
+    state.topN = topN;
+    state.cutN = cutN;
+    save();
+    render();
+  }
+
+  // ---------------------------------------------------------------- drag and drop
+
+  ranked.addEventListener('pointerdown', (e) => {
+    if (drag && !drag.started) endDrag(false); // a release we never saw, e.g. outside the window
+    if (drag || e.button !== 0) return;
+    const row = e.target.closest('.row');
+    if (!row || e.target.closest('button, input, .editing')) return;
+    // On touch screens only the grip starts a drag, so the page still scrolls.
+    if (e.pointerType !== 'mouse' && !e.target.closest('.grip')) return;
+    drag = { row, id: row.dataset.id, pointerId: e.pointerId, x0: e.clientX, y0: e.clientY, y: e.clientY, started: false };
+    window.addEventListener('pointermove', onDragMove);
+    window.addEventListener('pointerup', onDragEnd);
+    window.addEventListener('pointercancel', onDragCancel);
+  });
+
+  function startDrag() {
+    const { row } = drag;
+    row.getAnimations().forEach((a) => a.cancel());
+    const rect = row.getBoundingClientRect();
+    drag.started = true;
+    drag.offsetY = drag.y0 - rect.top;
+    drag.height = rect.height;
+    drag.origNext = row.nextSibling;
+    drag.origOrder = activeItems().map((i) => i.id).join();
+
+    placeholder = document.createElement('li');
+    placeholder.className = 'placeholder';
+    placeholder.style.height = `${rect.height}px`;
+    ranked.insertBefore(placeholder, row);
+
+    row.classList.add('lifted');
+    row.style.width = `${rect.width}px`;
+    row.style.left = `${rect.left}px`;
+    row.style.top = `${rect.top}px`;
+    try { row.setPointerCapture(drag.pointerId); } catch (err) { /* pointer already released */ }
+    document.body.classList.add('dragging');
+    applyRanks();
+    drag.raf = requestAnimationFrame(autoScroll);
+  }
+
+  function onDragMove(e) {
+    if (!drag || e.pointerId !== drag.pointerId) return;
+    drag.y = e.clientY;
+    if (!drag.started) {
+      if (Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) < 5) return;
+      startDrag();
+    }
+    e.preventDefault();
+    drag.row.style.top = `${drag.y - drag.offsetY}px`;
+    updateTarget();
+  }
+
+  // Uses layout positions (offsetTop) rather than on-screen ones so rows that
+  // are still sliding don't make the target flicker.
+  function updateTarget() {
+    const listTop = ranked.getBoundingClientRect().top;
+    const center = drag.y - drag.offsetY + drag.height / 2;
+    const others = [...ranked.children].filter((el) => el !== drag.row && el !== placeholder);
+    const ref = others.find((el) => listTop + el.offsetTop + el.offsetHeight / 2 > center) || null;
+    let current = placeholder.nextSibling;
+    if (current === drag.row) current = current.nextSibling;
+    if (current === ref) return;
+    flip(() => {
+      ranked.insertBefore(placeholder, ref);
+      applyRanks();
+    });
+  }
+
+  function autoScroll() {
+    if (!drag || !drag.started) return;
+    const edge = 80;
+    const h = window.innerHeight;
+    let v = 0;
+    if (drag.y < edge) v = -Math.ceil((edge - drag.y) / 5);
+    else if (drag.y > h - edge) v = Math.ceil((drag.y - (h - edge)) / 5);
+    if (v) {
+      const before = window.scrollY;
+      window.scrollBy(0, v);
+      if (window.scrollY !== before) updateTarget();
+    }
+    drag.raf = requestAnimationFrame(autoScroll);
+  }
+
+  function endDrag(commit) {
+    window.removeEventListener('pointermove', onDragMove);
+    window.removeEventListener('pointerup', onDragEnd);
+    window.removeEventListener('pointercancel', onDragCancel);
+    const d = drag;
+    if (!d || !d.started) { drag = null; return; }
+    cancelAnimationFrame(d.raf);
+
+    const from = d.row.getBoundingClientRect();
+    ranked.insertBefore(d.row, commit ? placeholder : d.origNext);
+    placeholder.remove();
+    placeholder = null;
+    d.row.classList.remove('lifted');
+    d.row.style.width = d.row.style.left = d.row.style.top = '';
+    document.body.classList.remove('dragging');
+    drag = null;
+
+    const order = [...ranked.children].map((el) => el.dataset.id);
+    if (commit && order.join() !== d.origOrder) {
+      checkpoint();
+      const byId = new Map(state.items.map((i) => [i.id, i]));
+      state.items = [...order.map((id) => byId.get(id)), ...state.items.filter((i) => i.out)];
+      save();
+      const item = byId.get(d.id);
+      announce(`${item.name} moved to rank ${order.indexOf(d.id) + 1}`);
+    }
+    flip(applyRanks);
+
+    if (!reduceMotion) {
+      const to = d.row.getBoundingClientRect();
+      d.row.animate(
+        [{ transform: `translate(${from.left - to.left}px, ${from.top - to.top}px)`, boxShadow: '0 16px 36px rgba(31,56,100,.28)' }, { transform: 'none' }],
+        { duration: 180, easing: 'cubic-bezier(.2,.7,.2,1)' },
+      );
+    }
+  }
+
+  const onDragEnd = (e) => { if (drag && e.pointerId === drag.pointerId) endDrag(true); };
+  const onDragCancel = (e) => { if (drag && e.pointerId === drag.pointerId) endDrag(false); };
+
+  // ---------------------------------------------------------------- inline editing
+
+  function startEdit(field) {
+    const row = field.closest('.row');
+    const item = find(row.dataset.id);
+    if (!item || field.classList.contains('editing')) return;
+    const key = field.classList.contains('name') ? 'name' : 'summary';
+    let cancelled = false;
+    let viaKey = false;
+
+    try { field.contentEditable = 'plaintext-only'; } catch (e) { field.contentEditable = 'true'; }
+    field.classList.add('editing');
+    field.focus();
+    const range = document.createRange();
+    range.selectNodeContents(field);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+
+    const onKey = (e) => {
+      e.stopPropagation();
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); viaKey = true; field.blur(); }
+      if (e.key === 'Escape') { e.preventDefault(); viaKey = cancelled = true; field.blur(); }
+    };
+    field.addEventListener('keydown', onKey);
+    field.addEventListener('blur', () => {
+      field.removeEventListener('keydown', onKey);
+      field.contentEditable = 'false';
+      field.classList.remove('editing');
+      const value = field.textContent.replace(/\s+/g, ' ').trim();
+      if (!cancelled && value !== item[key] && (value || key === 'summary')) {
+        checkpoint();
+        item[key] = value;
+        save();
+      }
+      render();
+      if (viaKey) row.focus({ preventScroll: true });
+    }, { once: true });
+  }
+
+  // ---------------------------------------------------------------- results
+
+  function tierLabel(rank) {
+    if (rank <= state.topN) return `Top ${state.topN}`;
+    if (rank <= state.cutN) return `Top ${state.cutN}`;
+    return '';
+  }
+
+  function resultsText() {
+    const active = activeItems();
+    const out = state.items.filter((i) => i.out);
+    const date = new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+    const lines = [`Automation candidate ranking${state.title ? `: ${state.title}` : ''}`, date, ''];
+    active.forEach((item, i) => {
+      lines.push(`${i + 1}. ${item.starred ? '★ ' : ''}${item.name}${item.summary ? ` - ${item.summary}` : ''}`);
+      if (i + 1 === state.cutN && i + 1 < active.length) lines.push(`---------- top ${state.cutN} cut line ----------`);
+    });
+    if (out.length) {
+      lines.push('', 'Ruled out:');
+      for (const item of out) lines.push(`✕ ${item.name}${item.summary ? ` - ${item.summary}` : ''}`);
+    }
+    if (active.some((i) => i.starred)) lines.push('', '★ = starred');
+    return lines.join('\n');
+  }
+
+  async function copyResults() {
+    const text = resultsText();
+    try {
+      await navigator.clipboard.writeText(text);
+      toast('Ranking copied to clipboard');
+    } catch (e) {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand('copy');
+      ta.remove();
+      toast(ok ? 'Ranking copied to clipboard' : 'Copy failed. Try the CSV download.');
+    }
+  }
+
+  // Cells starting with = + - @ are prefixed so spreadsheets don't run them as formulas.
+  function csvCell(v) {
+    let s = String(v == null ? '' : v);
+    if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`;
+    return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  }
+
+  function downloadCsv() {
+    const rows = [['Rank', 'Name', 'Summary', 'Starred', 'Tier']];
+    activeItems().forEach((item, i) => rows.push([i + 1, item.name, item.summary, item.starred ? 'Yes' : '', tierLabel(i + 1)]));
+    for (const item of state.items.filter((i) => i.out)) rows.push(['', item.name, item.summary, '', 'Ruled out']);
+    const csv = rows.map((r) => r.map(csvCell).join(',')).join('\r\n');
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
+    const slug = state.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    const day = new Date().toISOString().slice(0, 10);
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `candidate-ranking${slug ? `-${slug}` : ''}-${day}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+
+  // ---------------------------------------------------------------- setup panel
+
+  function openSetup() {
+    input.value = toText(state.items);
+    const hasItems = state.items.length > 0;
+    $('#buildBtn').textContent = hasItems ? 'Update list' : 'Build ranking';
+    $('#cancelBtn').hidden = !hasItems;
+    $('#clearBtn').hidden = !hasItems && !state.title;
+    setup.hidden = false;
+    board.hidden = true;
+    input.focus();
+  }
+
+  function closeSetup() {
+    setup.hidden = true;
+    render();
+  }
+
+  $('#buildBtn').addEventListener('click', () => {
+    const parsed = parseLines(input.value);
+    if (!parsed.length) { toast('Add at least one candidate'); input.focus(); return; }
+    if (state.items.length) checkpoint();
+    applyParsed(parsed);
+    save();
+    closeSetup();
+  });
+  $('#cancelBtn').addEventListener('click', closeSetup);
+  $('#exampleBtn').addEventListener('click', () => {
+    if (input.value.trim() && !window.confirm('Replace the text box with the example candidates?')) return;
+    input.value = EXAMPLE;
+    input.focus();
+  });
+  $('#clearBtn').addEventListener('click', () => {
+    if (!window.confirm('Clear the title and every candidate? You can undo this until you close the page.')) return;
+    if (state.items.length) checkpoint();
+    state.items = [];
+    state.title = '';
+    titleEl.value = '';
+    save();
+    render();
+    openSetup();
+  });
+
+  // ---------------------------------------------------------------- wiring
+
+  titleEl.addEventListener('input', () => {
+    state.title = titleEl.value;
+    document.title = state.title ? `${state.title} · Candidate Ranking` : 'Candidate Ranking';
+    save();
+  });
+  titleEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') titleEl.blur(); });
+
+  $('#editBtn').addEventListener('click', openSetup);
+  undoBtn.addEventListener('click', undo);
+  $('#copyBtn').addEventListener('click', copyResults);
+  $('#csvBtn').addEventListener('click', downloadCsv);
+  $('#presentBtn').addEventListener('click', () => setPresent(true));
+  exitPresentBtn.addEventListener('click', () => setPresent(false));
+
+  for (const st of document.querySelectorAll('[data-stepper]')) {
+    st.addEventListener('click', (e) => {
+      const b = e.target.closest('button[data-step]');
+      if (b) setStep(st.dataset.stepper, Number(b.dataset.step));
+    });
+  }
+
+  addInput.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
+    const parsed = parseLines(addInput.value);
+    if (!parsed.length) return;
+    checkpoint();
+    const added = parsed.map((p) => ({ id: uid(), name: p.name, summary: p.summary, starred: false, out: false }));
+    const active = activeItems();
+    state.items = [...active, ...added, ...state.items.filter((i) => i.out)];
+    addInput.value = '';
+    save();
+    render();
+    announce(`${added.map((i) => i.name).join(', ')} added at rank ${active.length + 1}`);
+  });
+
+  board.addEventListener('click', (e) => {
+    const btn = e.target.closest('.act');
+    if (!btn) return;
+    const id = btn.closest('.row').dataset.id;
+    if (btn.classList.contains('star')) toggleStar(id);
+    else if (btn.classList.contains('cross')) setOut(id, true);
+    else if (btn.classList.contains('restore')) setOut(id, false);
+    else if (btn.classList.contains('remove')) removeItem(id);
+  });
+
+  board.addEventListener('dblclick', (e) => {
+    const field = e.target.closest('.name, .summary');
+    if (field && !drag) startEdit(field);
+  });
+
+  board.addEventListener('keydown', (e) => {
+    const row = e.target;
+    if (!row.classList || !row.classList.contains('row')) return;
+    const id = row.dataset.id;
+    const item = find(id);
+    const key = e.key;
+    if (e.ctrlKey || e.metaKey) return;
+    if ((key === 'ArrowUp' || key === 'ArrowDown') && e.altKey) {
+      e.preventDefault();
+      if (!item.out) move(id, key === 'ArrowUp' ? -1 : 1);
+    } else if (key === 'ArrowUp' || key === 'ArrowDown') {
+      e.preventDefault();
+      const rows = [...board.querySelectorAll('.list > .row')];
+      const next = rows[rows.indexOf(row) + (key === 'ArrowUp' ? -1 : 1)];
+      if (next) next.focus();
+    } else if (key === 's' || key === 'S') {
+      toggleStar(id);
+    } else if (key === 'x' || key === 'X') {
+      setOut(id, !item.out);
+    } else if ((key === 'Delete' || key === 'Backspace') && item.out) {
+      e.preventDefault();
+      const rows = [...board.querySelectorAll('.list > .row')];
+      const next = rows[rows.indexOf(row) + 1] || rows[rows.indexOf(row) - 1];
+      removeItem(id);
+      if (next && next.isConnected) next.focus();
+    } else if (key === 'Enter' || key === 'F2') {
+      e.preventDefault();
+      startEdit(row.querySelector('.name'));
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    const typing = e.target.closest && e.target.closest('input, textarea, .editing');
+    if (e.key === 'Escape' && drag && drag.started) { endDrag(false); return; }
+    if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'z' && !typing && setup.hidden) {
+      e.preventDefault();
+      undo();
+    } else if (e.key === 'Escape' && !typing && document.body.classList.contains('present')) {
+      setPresent(false);
+    }
+  });
+
+  function setPresent(on) {
+    document.documentElement.classList.toggle('present', on);
+    document.body.classList.toggle('present', on);
+    exitPresentBtn.hidden = !on;
+    if (on) toast('Present mode. Press Esc to exit.');
+  }
+
+  let toastTimer;
+  function toast(msg) {
+    const t = $('#toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 2000);
+  }
+
+  function announce(msg) { $('#sr').textContent = msg; }
+
+  // ---------------------------------------------------------------- start
+
+  normalize();
+  if (state.items.length) render();
+  else { render(); openSetup(); }
+})();
+</script>
+</body>
+</html>
