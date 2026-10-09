@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Agent Rank Tool</title>
+<title>Automation Candidate Ranking</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231F3864'/%3E%3Crect x='8' y='8' width='16' height='4' rx='2' fill='%23fff'/%3E%3Crect x='8' y='14' width='12' height='4' rx='2' fill='%23D9E2F3'/%3E%3Crect x='8' y='20' width='8' height='4' rx='2' fill='%23D9E2F3'/%3E%3C/svg%3E">
 <style>
   /* Layout: one centered column; the ranked list is the page.
-     Colors: the playbook palette from intake-agent-1's style.py. Dark is the
-     default; the light theme (html.light) keeps the playbook's own values. */
+     Colors: the navy/blue playbook palette from intake-agent-1's style.py,
+     set on a dark ground. */
   :root {
     color-scheme: dark;
     --bg: #0F1626;
@@ -24,7 +24,6 @@
     --icon: #8494B2;
     --heading: #E3EBFA;
     --accent: #8AACEB;
-    --accent-soft: #4F6FA8;
     --btn-bg: #172136;
     --btn-hover: #1F2C47;
     --primary: #3A63B5;
@@ -38,7 +37,6 @@
     --badge-bg: #1E2A42;
     --badge-border: #2E3D5E;
     --badge-fg: #C9D6EE;
-    --star: #F5B83D;
     --danger: #FF7B7B;
     --danger-soft: #5C2B35;
     --out-bg: #121927;
@@ -51,52 +49,10 @@
     --toast-fg: #0F1626;
     --font: Arial, Helvetica, sans-serif;
   }
-  :root.light {
-    color-scheme: light;
-    --bg: #FFFFFF;
-    --surface: #FFFFFF;
-    --panel: #F2F5FB;
-    --field: #FFFFFF;
-    --border: #D9E2F3;
-    --border-strong: #C3D1EA;
-    --text: #1A1A1A;
-    --text-2: #333333;
-    --muted: #595959;
-    --faint: #A9B6CE;
-    --icon: #7F8CA6;
-    --heading: #1F3864;
-    --accent: #2E5496;
-    --accent-soft: #8EA9DB;
-    --btn-bg: #FFFFFF;
-    --btn-hover: #F2F5FB;
-    --primary: #1F3864;
-    --primary-hover: #2E5496;
-    --on-primary: #FFFFFF;
-    --top-fill: #E8EEF9;
-    --top-border: #C3D1EA;
-    --top-bar: #1F3864;
-    --top-badge: #1F3864;
-    --on-top-badge: #FFFFFF;
-    --badge-bg: #F2F5FB;
-    --badge-border: #D9E2F3;
-    --badge-fg: #1F3864;
-    --star: #D99A00;
-    --danger: #C00000;
-    --danger-soft: #EBC7C7;
-    --out-bg: #FAFAFA;
-    --out-border: #E6E6E6;
-    --out-text: #8A8A8A;
-    --rule: #E3E3E3;
-    --shadow: rgba(31, 56, 100, 0.28);
-    --scrim: rgba(15, 22, 38, 0.45);
-    --toast-bg: #1F3864;
-    --toast-fg: #FFFFFF;
-  }
 
   [hidden] { display: none !important; }
   * { box-sizing: border-box; }
   html { font-size: 16px; -webkit-text-size-adjust: 100%; background: var(--bg); }
-  html.present { font-size: 18px; }
   body {
     margin: 0;
     background: var(--bg);
@@ -106,31 +62,25 @@
   }
   .wrap { max-width: 960px; margin: 0 auto; padding: 32px 16px 72px; }
 
-  /* Masthead */
-  .eyebrow {
-    color: var(--accent);
-    font-size: 0.8rem;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-  .title {
-    display: block;
-    width: 100%;
-    margin: 6px 0 0;
-    padding: 2px 0 10px;
-    border: 0;
+  /* Header: page name and the two actions */
+  .masthead {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px 20px;
+    padding-bottom: 14px;
+    margin-bottom: 24px;
     border-bottom: 2px solid var(--border);
-    background: transparent;
-    color: var(--heading);
-    font: 700 1.9rem/1.2 var(--font);
-    outline: none;
   }
-  .title::placeholder { color: var(--icon); }
-  .title:focus { border-bottom-color: var(--accent); }
-  .hint { margin: 12px 0 0; color: var(--muted); font-size: 0.95rem; }
-  .hint .k-star { color: var(--star); }
-  .hint .k-out { color: var(--danger); }
+  h1 {
+    margin: 0;
+    color: var(--heading);
+    font-size: 1.9rem;
+    line-height: 1.2;
+    text-wrap: balance;
+  }
+  .actions-bar { display: flex; flex-wrap: wrap; gap: 8px; }
 
   /* Buttons */
   button {
@@ -142,65 +92,24 @@
     padding: 9px 13px;
     cursor: pointer;
   }
-  button:hover { background: var(--btn-hover); border-color: var(--accent-soft); }
-  button:focus-visible, .row:focus-visible, .add input:focus-visible {
+  button:hover { background: var(--btn-hover); border-color: var(--border-strong); }
+  button:focus-visible, .row:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
   }
-  button:disabled { opacity: 0.45; cursor: default; background: var(--btn-bg); border-color: var(--border); }
   button.primary { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
   button.primary:hover { background: var(--primary-hover); border-color: var(--primary-hover); }
-  button.link { border-color: transparent; background: none; color: var(--accent); padding-left: 6px; padding-right: 6px; }
-  button.link:hover { text-decoration: underline; }
-  button.danger { color: var(--danger); }
-  button.armed, button.armed:hover { border-color: var(--danger); color: var(--danger); text-decoration: none; }
-  button.icon-btn { display: inline-grid; place-items: center; width: 38px; height: 34px; padding: 0; }
-  button.icon-btn svg { display: block; }
-  html.light .theme-sun, html:not(.light) .theme-moon { display: none; }
 
-  /* Toolbar */
-  .toolbar {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 10px 18px;
-    margin: 22px 0 20px;
-  }
-  .toolbar .spacer { flex: 1 1 0; }
-  .toolbar .group { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-  .ctl { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 0.875rem; }
-  .stepper { display: inline-flex; align-items: center; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
-  .stepper button { border: 0; border-radius: 0; padding: 7px 10px; font-size: 1rem; }
-  .stepper output { min-width: 26px; text-align: center; font-weight: 700; color: var(--heading); font-variant-numeric: tabular-nums; }
-
-  /* Example notice */
-  .example-note {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 4px 8px;
-    margin: 18px 0 0;
-    padding: 10px 14px;
-    border: 1px dashed var(--border-strong);
-    border-radius: 8px;
-    color: var(--muted);
-    font-size: 0.9rem;
-  }
-  .example-note strong { color: var(--heading); }
-
-  /* Setup panel */
+  /* Edit list panel */
   .setup {
-    margin-top: 24px;
     padding: 20px;
     background: var(--panel);
     border: 1px solid var(--border);
     border-radius: 10px;
   }
-  .setup h2 { margin: 0 0 6px; color: var(--heading); font-size: 1.2rem; }
-  .setup p { margin: 0 0 12px; color: var(--muted); font-size: 0.9rem; }
   .setup textarea {
     width: 100%;
-    min-height: 240px;
+    min-height: 280px;
     padding: 12px 14px;
     border: 1px solid var(--border-strong);
     border-radius: 8px;
@@ -211,9 +120,7 @@
   }
   .setup textarea::placeholder { color: var(--icon); }
   .setup textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
-  .setup-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; }
-  .setup-actions .spacer { flex: 1 1 0; }
-  .setup .note { margin: 12px 0 0; font-size: 0.8rem; }
+  .setup-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 
   /* Rows */
   .list {
@@ -268,47 +175,11 @@
     border-radius: 3px;
   }
 
-  /* Tiers */
-  .row.tier-top { background: var(--top-fill); border-color: var(--top-border); border-left-color: var(--top-bar); }
-  .row.tier-top .badge { background: var(--top-badge); border-color: var(--top-badge); color: var(--on-top-badge); }
-  .row.tier-short { border-left-color: var(--accent-soft); }
-  .row.tier-short .badge { background: var(--surface); border-color: var(--accent); color: var(--accent); }
+  /* Top three */
+  .row.top { background: var(--top-fill); border-color: var(--top-border); border-left-color: var(--top-bar); }
+  .row.top .badge { background: var(--top-badge); border-color: var(--top-badge); color: var(--on-top-badge); }
 
-  /* Starred */
-  .row.starred { box-shadow: 0 0 0 2px var(--star); }
-
-  /* Cut line, drawn below the last row above the cut */
-  .cut-after { margin-bottom: 30px; }
-  .cut-after::after {
-    content: "";
-    position: absolute;
-    left: -7px;
-    right: -1px;
-    bottom: -22px;
-    border-top: 2px dashed var(--accent-soft);
-    pointer-events: none;
-  }
-  .cut-after::before {
-    content: attr(data-cut);
-    position: absolute;
-    z-index: 1;
-    left: 50%;
-    bottom: -30px;
-    transform: translateX(-50%);
-    padding: 0 12px;
-    background: var(--bg);
-    color: var(--accent);
-    font-size: 0.72rem;
-    font-weight: 700;
-    letter-spacing: 0.1em;
-    line-height: 16px;
-    text-transform: uppercase;
-    white-space: nowrap;
-    pointer-events: none;
-  }
-
-  /* Row actions */
-  .actions { display: flex; gap: 2px; }
+  /* Row action */
   .act {
     display: grid;
     place-items: center;
@@ -320,13 +191,10 @@
     background: transparent;
     color: var(--icon);
   }
-  .act:hover { background: var(--btn-hover); border-color: var(--border); color: var(--heading); }
+  .act:hover { background: var(--btn-hover); border-color: var(--border); color: var(--danger); }
   .act svg { display: block; }
-  .act.star path { fill: none; stroke: currentColor; }
-  .act.star[aria-pressed="true"] { color: var(--star); }
-  .act.star[aria-pressed="true"] path { fill: currentColor; }
-  .act.cross:hover, .act.remove:hover { color: var(--danger); }
-  .row:not(.out) .restore, .row:not(.out) .remove, .row.out .star, .row.out .cross { display: none; }
+  .row:not(.out) .restore, .row.out .cross { display: none; }
+  .row.out .restore:hover { color: var(--heading); }
 
   /* Ruled out */
   .out-section { margin-top: 36px; }
@@ -342,7 +210,7 @@
     text-transform: uppercase;
   }
   .section-label::after { content: ""; flex: 1; border-top: 1px solid var(--rule); }
-  .row.out { cursor: default; background: var(--out-bg); border-color: var(--out-border); border-left-color: var(--out-border); box-shadow: none; }
+  .row.out { cursor: default; background: var(--out-bg); border-color: var(--out-border); border-left-color: var(--out-border); }
   .row.out .badge { background: var(--out-bg); border-color: var(--danger-soft); color: var(--danger); font-size: 0.95rem; }
   .row.out .grip { visibility: hidden; }
   .row.out .name, .row.out .summary {
@@ -358,30 +226,8 @@
     cursor: grabbing;
     box-shadow: 0 16px 36px var(--shadow);
   }
-  .row.lifted.starred { box-shadow: 0 0 0 2px var(--star), 0 16px 36px var(--shadow); }
-  .placeholder { position: relative; border: 2px dashed var(--accent-soft); border-radius: 8px; background: var(--panel); }
+  .placeholder { border: 2px dashed var(--border-strong); border-radius: 8px; background: var(--panel); }
   body.dragging, body.dragging * { cursor: grabbing !important; }
-
-  /* Quick add */
-  .add { margin-top: 14px; }
-  .add input {
-    width: 100%;
-    padding: 13px 14px;
-    border: 1px dashed var(--border-strong);
-    border-radius: 8px;
-    background: transparent;
-    color: var(--text);
-    font: 0.95rem var(--font);
-  }
-  .add input::placeholder { color: var(--icon); }
-  .add input:focus { border-style: solid; border-color: var(--accent); background: var(--field); outline: none; }
-
-  /* Present mode: hide the controls, keep the list */
-  body.present .toolbar, body.present .setup, body.present .example-note { display: none !important; }
-  body.present #ranked { margin-top: 24px; }
-  body.present .add input:not(:focus) { opacity: 0.5; }
-  .exit-present { position: fixed; top: 12px; right: 12px; z-index: 60; opacity: 0.4; }
-  .exit-present:hover, .exit-present:focus-visible { opacity: 1; }
 
   /* Copy fallback, for browsers that refuse clipboard access */
   .copy-dialog {
@@ -430,90 +276,36 @@
   @media (max-width: 600px) {
     .row { gap: 8px; padding: 12px 6px 12px 8px; }
     .act { width: 34px; height: 34px; }
-    .title { font-size: 1.5rem; }
+    h1 { font-size: 1.5rem; }
   }
 
   @media (prefers-reduced-motion: reduce) {
     .toast { transition: none; }
   }
-
-  @media print {
-    .toolbar, .setup, .add, .actions, .exit-present, .toast, .example-note { display: none !important; }
-    .row { break-inside: avoid; }
-  }
 </style>
-<script>
-  try { if (localStorage.getItem('agentRankTool:theme') === 'light') document.documentElement.classList.add('light'); } catch (e) { /* storage unavailable */ }
-</script>
 </head>
 <body>
 <div class="wrap">
-  <header>
-    <div class="eyebrow">Automation candidate ranking</div>
-    <input id="title" class="title" type="text" placeholder="Session title, e.g. client name" aria-label="Session title" autocomplete="off">
-    <p class="hint">Drag to rank. <span class="k-star">&#9733;</span> marks a favorite, <span class="k-out">&#10005;</span> rules one out.</p>
+  <header class="masthead">
+    <h1>Automation Candidate Ranking</h1>
+    <div class="actions-bar" id="actionsBar">
+      <button id="editBtn" type="button">Edit list</button>
+      <button id="copyBtn" class="primary" type="button">Copy results</button>
+    </div>
   </header>
 
   <section id="setup" class="setup" hidden>
-    <h2>Candidates</h2>
-    <p>One per line: the name, then a dash, colon or tab, then a one-sentence summary. Bullets and numbering are ignored, so you can paste a list straight from your notes.</p>
-    <textarea id="input" spellcheck="true" aria-label="Candidates, one per line" placeholder="Invoice Matching Agent - Matches incoming invoices to purchase orders and flags mismatches.&#10;Customer Inquiry Triage - Reads inbound emails, tags the intent and routes each one to the right team.&#10;Weekly KPI Report Builder: Pulls numbers from source systems and drafts the leadership report."></textarea>
+    <textarea id="input" spellcheck="true" aria-label="Candidates, one per line: name, a dash, then a short summary" placeholder="Invoice Matching Agent - Matches incoming invoices to purchase orders and flags mismatches.&#10;Customer Inquiry Triage - Reads inbound emails, tags the intent and routes each one to the right team.&#10;Weekly KPI Report Builder - Pulls numbers from source systems and drafts the leadership report."></textarea>
     <div class="setup-actions">
-      <button id="buildBtn" class="primary" type="button">Build ranking</button>
+      <button id="saveBtn" class="primary" type="button">Save list</button>
       <button id="cancelBtn" type="button">Cancel</button>
-      <button id="exampleBtn" class="link" type="button">Load example</button>
-      <span class="spacer"></span>
-      <button id="clearBtn" class="link danger" type="button">Clear everything</button>
     </div>
-    <p class="note">Everything stays in this browser. Nothing is uploaded.</p>
   </section>
 
   <div id="board" hidden>
-    <div id="exampleNote" class="example-note" hidden>
-      <span><strong>Example candidates.</strong> Try dragging, starring and crossing out, then paste your own list.</span>
-      <button id="ownBtn" class="link" type="button">Paste your own list</button>
-    </div>
-
-    <div class="toolbar" id="toolbar">
-      <div class="group">
-        <button id="editBtn" type="button">Edit list</button>
-      </div>
-      <div class="group">
-        <span class="ctl">Highlight top
-          <span class="stepper" data-stepper="topN">
-            <button type="button" data-step="-1" aria-label="Highlight fewer">&minus;</button>
-            <output id="topN" aria-live="polite">3</output>
-            <button type="button" data-step="1" aria-label="Highlight more">+</button>
-          </span>
-        </span>
-        <span class="ctl">Cut line after
-          <span class="stepper" data-stepper="cutN">
-            <button type="button" data-step="-1" aria-label="Move cut line up">&minus;</button>
-            <output id="cutN" aria-live="polite">4</output>
-            <button type="button" data-step="1" aria-label="Move cut line down">+</button>
-          </span>
-        </span>
-      </div>
-      <span class="spacer"></span>
-      <div class="group">
-        <button id="undoBtn" type="button" title="Undo (Ctrl+Z)" disabled>Undo</button>
-        <button id="copyBtn" type="button" title="Copy the ranking as text for your notes">Copy results</button>
-        <button id="tableBtn" type="button" title="Copy the ranking as a table to paste into Excel or Sheets">Copy table</button>
-        <button id="themeBtn" class="icon-btn" type="button" aria-label="Switch to light theme" title="Switch to light theme">
-          <svg class="theme-sun" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></g></svg>
-          <svg class="theme-moon" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.2 14.6A8.5 8.5 0 0 1 9.4 3.8a8.5 8.5 0 1 0 10.8 10.8z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
-        </button>
-        <button id="presentBtn" class="primary" type="button" title="Hide the controls for screen sharing">Present</button>
-      </div>
-    </div>
-
     <ol id="ranked" class="list" aria-label="Ranked candidates"></ol>
-    <div class="add">
-      <input id="addInput" type="text" autocomplete="off" aria-label="Add a candidate" placeholder="+ Add a candidate (Name - summary), then press Enter">
-    </div>
-
     <section id="outSection" class="out-section" hidden>
-      <h3 class="section-label">Ruled out</h3>
+      <h2 class="section-label">Ruled out</h2>
       <ul id="outList" class="list" aria-label="Ruled out candidates"></ul>
     </section>
   </div>
@@ -528,7 +320,6 @@
   </div>
 </dialog>
 
-<button id="exitPresent" class="exit-present" type="button" hidden>Exit present (Esc)</button>
 <div id="toast" class="toast" role="status"></div>
 <div id="sr" class="sr-only" aria-live="polite"></div>
 
@@ -537,8 +328,7 @@
   'use strict';
 
   const STORE_KEY = 'agentRankTool:v1';
-  const THEME_KEY = 'agentRankTool:theme';
-  const APP_NAME = 'Agent Rank Tool';
+  const TOP = 3;
   const EXAMPLE = [
     'Invoice Matching Agent - Matches incoming invoices to purchase orders and flags mismatches for review.',
     'Customer Inquiry Triage - Reads inbound emails, tags the intent and routes each one to the right team.',
@@ -552,39 +342,27 @@
 
   const ICONS = {
     grip: '<svg width="12" height="20" viewBox="0 0 12 20" aria-hidden="true"><g fill="currentColor"><circle cx="3" cy="4" r="1.6"/><circle cx="9" cy="4" r="1.6"/><circle cx="3" cy="10" r="1.6"/><circle cx="9" cy="10" r="1.6"/><circle cx="3" cy="16" r="1.6"/><circle cx="9" cy="16" r="1.6"/></g></svg>',
-    star: '<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.8l2.83 5.73 6.33.92-4.58 4.46 1.08 6.3L12 17.24l-5.66 2.97 1.08-6.3-4.58-4.46 6.33-.92z" stroke-width="1.8" stroke-linejoin="round"/></svg>',
     cross: '<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>',
     restore: '<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.35-5.65M4 4v4.5h4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-    remove: '<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M10 7V4.5h4V7M7 7l1 12.5h8L17 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   };
 
   const $ = (sel) => document.querySelector(sel);
-  const root = document.documentElement;
-  const titleEl = $('#title');
   const setup = $('#setup');
   const input = $('#input');
   const board = $('#board');
+  const actionsBar = $('#actionsBar');
   const ranked = $('#ranked');
   const outList = $('#outList');
   const outSection = $('#outSection');
-  const addInput = $('#addInput');
-  const undoBtn = $('#undoBtn');
-  const themeBtn = $('#themeBtn');
-  const exitPresentBtn = $('#exitPresent');
   const copyDialog = $('#copyDialog');
 
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const els = new Map();
-  const history = [];
   let seq = 0;
   let drag = null;
   let placeholder = null;
 
   const uid = () => 'c' + Date.now().toString(36) + (seq++).toString(36);
-  const clampInt = (v, lo, hi, dflt) => {
-    const n = Math.round(Number(v));
-    return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : dflt;
-  };
 
   // ---------------------------------------------------------------- storage
 
@@ -594,19 +372,13 @@
       if (!raw) return null;
       const s = JSON.parse(raw);
       if (!s || !Array.isArray(s.items)) return null;
-      const topN = clampInt(s.topN, 1, 20, 3);
       return {
-        title: String(s.title || ''),
         items: s.items.filter((i) => i && i.name).map((i) => ({
           id: String(i.id || uid()),
           name: String(i.name),
           summary: String(i.summary || ''),
-          starred: !!i.starred,
           out: !!i.out,
         })),
-        topN,
-        cutN: Math.max(topN, clampInt(s.cutN, 1, 20, 4)),
-        example: !!s.example,
       };
     } catch (e) {
       return null;
@@ -615,24 +387,6 @@
 
   function save() {
     try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* storage unavailable */ }
-  }
-
-  // ---------------------------------------------------------------- undo
-
-  function checkpoint() {
-    history.push(JSON.stringify({ items: state.items, topN: state.topN, cutN: state.cutN }));
-    if (history.length > 100) history.shift();
-    undoBtn.disabled = false;
-  }
-
-  function undo() {
-    const snap = history.pop();
-    undoBtn.disabled = history.length === 0;
-    if (!snap) return;
-    Object.assign(state, JSON.parse(snap));
-    save();
-    render();
-    toast('Undone');
   }
 
   // ---------------------------------------------------------------- parsing
@@ -663,7 +417,7 @@
   const nameKey = (s) => s.toLowerCase().replace(/\s+/g, ' ').trim();
 
   // The text box order becomes the list order. Lines whose name matches an
-  // existing candidate keep its star and ruled-out state.
+  // existing candidate keep its ruled-out state.
   function applyParsed(parsed) {
     const pool = new Map();
     for (const item of state.items) {
@@ -675,7 +429,7 @@
       const existing = (pool.get(nameKey(p.name)) || []).shift();
       return existing
         ? { ...existing, name: p.name, summary: p.summary }
-        : { id: uid(), name: p.name, summary: p.summary, starred: false, out: false };
+        : { id: uid(), name: p.name, summary: p.summary, out: false };
     });
   }
 
@@ -683,10 +437,10 @@
     return items.map((i) => (i.summary ? `${i.name} - ${i.summary}` : i.name)).join('\n');
   }
 
-  // First visit: open on a marked example list so the tool shows what it does.
+  // First visit opens on a sample list so there is something to try.
   let state = load();
   if (!state) {
-    state = { title: '', items: [], topN: 3, cutN: 4, example: true };
+    state = { items: [] };
     applyParsed(parseLines(EXAMPLE));
     save();
   }
@@ -706,12 +460,8 @@
       '<span class="badge"></span>' +
       `<span class="grip" title="Drag to reorder">${ICONS.grip}</span>` +
       '<div class="text"><div class="name"></div><div class="summary"></div></div>' +
-      '<div class="actions">' +
-      `<button type="button" class="act star" title="Star (S)">${ICONS.star}</button>` +
-      `<button type="button" class="act cross" title="Rule out (X)">${ICONS.cross}</button>` +
-      `<button type="button" class="act restore" title="Bring back (X)">${ICONS.restore}</button>` +
-      `<button type="button" class="act remove" title="Delete (Del)">${ICONS.remove}</button>` +
-      '</div>';
+      `<button type="button" class="act cross" title="Rule out">${ICONS.cross}</button>` +
+      `<button type="button" class="act restore" title="Bring back">${ICONS.restore}</button>`;
     return li;
   }
 
@@ -721,14 +471,9 @@
     if (!name.classList.contains('editing')) name.textContent = item.name;
     if (!summary.classList.contains('editing')) summary.textContent = item.summary;
     summary.hidden = !item.summary;
-    li.classList.toggle('starred', item.starred);
     li.classList.toggle('out', item.out);
-    const star = li.querySelector('.star');
-    star.setAttribute('aria-pressed', String(item.starred));
-    star.setAttribute('aria-label', `${item.starred ? 'Unstar' : 'Star'} ${item.name}`);
     li.querySelector('.cross').setAttribute('aria-label', `Rule out ${item.name}`);
     li.querySelector('.restore').setAttribute('aria-label', `Bring back ${item.name}`);
-    li.querySelector('.remove').setAttribute('aria-label', `Delete ${item.name}`);
   }
 
   function syncList(parent, wanted) {
@@ -737,10 +482,6 @@
       if (el === ref) ref = ref.nextSibling;
       else parent.insertBefore(el, ref);
     }
-  }
-
-  function setDocTitle() {
-    document.title = state.title ? `${state.title} · ${APP_NAME}` : APP_NAME;
   }
 
   function render() {
@@ -774,34 +515,22 @@
     if (focusedId && els.has(focusedId) && document.activeElement !== els.get(focusedId)) {
       els.get(focusedId).focus({ preventScroll: true });
     }
-
-    $('#topN').textContent = state.topN;
-    $('#cutN').textContent = state.cutN;
-    $('#exampleNote').hidden = !state.example;
-    if (document.activeElement !== titleEl) titleEl.value = state.title;
-    setDocTitle();
     board.hidden = !setup.hidden;
+    actionsBar.hidden = !setup.hidden;
   }
 
-  // Rank numbers, tier colors and the cut line follow DOM order, so they
+  // Rank numbers and the top-three highlight follow DOM order, so they
   // update live while a row is being dragged.
   function applyRanks() {
     const kids = [...ranked.children].filter((el) => !drag || el !== drag.row);
-    const total = kids.length;
     kids.forEach((el, i) => {
-      const rank = i + 1;
       const row = el === placeholder ? drag.row : el;
-      row.querySelector('.badge').textContent = rank;
-      row.classList.toggle('tier-top', rank <= state.topN);
-      row.classList.toggle('tier-short', rank > state.topN && rank <= state.cutN);
-      const cut = rank === state.cutN && rank < total;
-      el.classList.toggle('cut-after', cut);
-      if (cut) el.dataset.cut = `Top ${state.cutN}`;
+      row.querySelector('.badge').textContent = i + 1;
+      row.classList.toggle('top', i < TOP);
     });
-    if (drag) drag.row.classList.remove('cut-after');
     for (const el of outList.children) {
       el.querySelector('.badge').textContent = '✕';
-      el.classList.remove('tier-top', 'tier-short', 'cut-after');
+      el.classList.remove('top');
     }
   }
 
@@ -829,22 +558,11 @@
   const find = (id) => state.items.find((i) => i.id === id);
   const activeItems = () => state.items.filter((i) => !i.out);
 
-  function toggleStar(id) {
-    const item = find(id);
-    if (!item || item.out) return;
-    checkpoint();
-    item.starred = !item.starred;
-    save();
-    render();
-    announce(`${item.name} ${item.starred ? 'starred' : 'unstarred'}`);
-  }
-
   // Ruled-out rows go to the top of the "Ruled out" list; restored rows go to
   // the bottom of the ranking.
   function setOut(id, out) {
     const item = find(id);
     if (!item || item.out === out) return;
-    checkpoint();
     state.items = state.items.filter((i) => i !== item);
     item.out = out;
     state.items.splice(activeItems().length, 0, item);
@@ -853,22 +571,11 @@
     announce(`${item.name} ${out ? 'ruled out' : 'brought back'}`);
   }
 
-  function removeItem(id) {
-    const item = find(id);
-    if (!item) return;
-    checkpoint();
-    state.items = state.items.filter((i) => i !== item);
-    save();
-    render();
-    toast(`Deleted ${item.name}. Undo with Ctrl+Z.`);
-  }
-
   function move(id, delta) {
     const active = activeItems();
     const from = active.findIndex((i) => i.id === id);
     const to = from + delta;
     if (from < 0 || to < 0 || to >= active.length) return;
-    checkpoint();
     const [item] = active.splice(from, 1);
     active.splice(to, 0, item);
     state.items = [...active, ...state.items.filter((i) => i.out)];
@@ -877,30 +584,13 @@
     announce(`${item.name} moved to rank ${to + 1}`);
   }
 
-  function setStep(which, delta) {
-    let { topN, cutN } = state;
-    if (which === 'topN') {
-      topN = clampInt(topN + delta, 1, 20, topN);
-      cutN = Math.max(cutN, topN);
-    } else {
-      cutN = clampInt(cutN + delta, 1, 20, cutN);
-      topN = Math.min(topN, cutN);
-    }
-    if (topN === state.topN && cutN === state.cutN) return;
-    checkpoint();
-    state.topN = topN;
-    state.cutN = cutN;
-    save();
-    render();
-  }
-
   // ---------------------------------------------------------------- drag and drop
 
   ranked.addEventListener('pointerdown', (e) => {
     if (drag && !drag.started) endDrag(false); // a release we never saw, e.g. outside the window
     if (drag || e.button !== 0) return;
     const row = e.target.closest('.row');
-    if (!row || e.target.closest('button, input, .editing')) return;
+    if (!row || e.target.closest('button, .editing')) return;
     // On touch screens only the grip starts a drag, so the page still scrolls.
     if (e.pointerType !== 'mouse' && !e.target.closest('.grip')) return;
     drag = { row, id: row.dataset.id, pointerId: e.pointerId, x0: e.clientX, y0: e.clientY, y: e.clientY, started: false };
@@ -996,12 +686,10 @@
 
     const order = [...ranked.children].map((el) => el.dataset.id);
     if (commit && order.join() !== d.origOrder) {
-      checkpoint();
       const byId = new Map(state.items.map((i) => [i.id, i]));
       state.items = [...order.map((id) => byId.get(id)), ...state.items.filter((i) => i.out)];
       save();
-      const item = byId.get(d.id);
-      announce(`${item.name} moved to rank ${order.indexOf(d.id) + 1}`);
+      announce(`${byId.get(d.id).name} moved to rank ${order.indexOf(d.id) + 1}`);
     }
     flip(applyRanks);
 
@@ -1048,7 +736,6 @@
       field.classList.remove('editing');
       const value = field.textContent.replace(/\s+/g, ' ').trim();
       if (!cancelled && value !== item[key] && (value || key === 'summary')) {
-        checkpoint();
         item[key] = value;
         save();
       }
@@ -1057,76 +744,47 @@
     }, { once: true });
   }
 
-  // ---------------------------------------------------------------- results
-
-  function tierLabel(rank) {
-    if (rank <= state.topN) return `Top ${state.topN}`;
-    if (rank <= state.cutN) return `Top ${state.cutN}`;
-    return '';
-  }
+  // ---------------------------------------------------------------- copy results
 
   function resultsText() {
-    const active = activeItems();
-    const out = state.items.filter((i) => i.out);
+    const line = (item) => `${item.name}${item.summary ? ` - ${item.summary}` : ''}`;
     const date = new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
-    const lines = [`Automation candidate ranking${state.title ? `: ${state.title}` : ''}`, date, ''];
-    active.forEach((item, i) => {
-      lines.push(`${i + 1}. ${item.starred ? '★ ' : ''}${item.name}${item.summary ? ` - ${item.summary}` : ''}`);
-      if (i + 1 === state.cutN && i + 1 < active.length) lines.push(`---------- top ${state.cutN} cut line ----------`);
-    });
+    const lines = ['Automation candidate ranking', date, ''];
+    activeItems().forEach((item, i) => lines.push(`${i + 1}. ${line(item)}`));
+    const out = state.items.filter((i) => i.out);
     if (out.length) {
       lines.push('', 'Ruled out:');
-      for (const item of out) lines.push(`✕ ${item.name}${item.summary ? ` - ${item.summary}` : ''}`);
+      for (const item of out) lines.push(`- ${line(item)}`);
     }
-    if (active.some((i) => i.starred)) lines.push('', '★ = starred');
     return lines.join('\n');
-  }
-
-  // Tab-separated, so it lands in separate cells when pasted into Excel or
-  // Sheets. Cells starting with = + - @ are prefixed so they stay text.
-  function tableCell(v) {
-    let s = String(v == null ? '' : v).replace(/[\t\r\n]+/g, ' ');
-    if (/^[=+\-@]/.test(s)) s = `'${s}`;
-    return s;
-  }
-
-  function tableText() {
-    const rows = [['Rank', 'Name', 'Summary', 'Starred', 'Tier']];
-    activeItems().forEach((item, i) => rows.push([i + 1, item.name, item.summary, item.starred ? 'Yes' : '', tierLabel(i + 1)]));
-    for (const item of state.items.filter((i) => i.out)) rows.push(['', item.name, item.summary, '', 'Ruled out']);
-    return rows.map((r) => r.map(tableCell).join('\t')).join('\n');
   }
 
   // writeText is called straight from the click so the browser counts it as
   // user-initiated. If the browser refuses, show the text ready to copy by hand.
-  function copyText(text, done) {
+  function copyResults() {
+    const text = resultsText();
     let attempt;
     try {
       attempt = navigator.clipboard.writeText(text);
     } catch (e) {
       attempt = Promise.reject(e);
     }
-    attempt.then(() => toast(done), () => showCopyDialog(text));
+    attempt.then(() => toast('Ranking copied'), () => {
+      const area = $('#copyText');
+      area.value = text;
+      copyDialog.showModal();
+      area.focus();
+      area.select();
+    });
   }
 
-  function showCopyDialog(text) {
-    const area = $('#copyText');
-    area.value = text;
-    copyDialog.showModal();
-    area.focus();
-    area.select();
-  }
+  // ---------------------------------------------------------------- edit list
 
-  // ---------------------------------------------------------------- setup panel
-
-  function openSetup(blank) {
-    input.value = blank ? '' : toText(state.items);
-    const hasItems = state.items.length > 0;
-    $('#buildBtn').textContent = hasItems ? 'Update list' : 'Build ranking';
-    $('#cancelBtn').hidden = !hasItems;
-    $('#clearBtn').hidden = !hasItems && !state.title;
+  function openSetup() {
+    input.value = toText(state.items);
+    $('#cancelBtn').hidden = state.items.length === 0;
     setup.hidden = false;
-    board.hidden = true;
+    render();
     input.focus();
   }
 
@@ -1135,99 +793,26 @@
     render();
   }
 
-  // Two-click confirm. Browser confirm() dialogs are blocked in some hosts.
-  function confirmClick(btn, question, needsConfirm, action) {
-    const label = btn.textContent;
-    let timer = null;
-    const reset = () => {
-      clearTimeout(timer);
-      delete btn.dataset.armed;
-      btn.textContent = label;
-      btn.classList.remove('armed');
-    };
-    btn.addEventListener('click', () => {
-      if (btn.dataset.armed || !needsConfirm()) { reset(); action(); return; }
-      btn.dataset.armed = '1';
-      btn.textContent = question;
-      btn.classList.add('armed');
-      timer = setTimeout(reset, 4000);
-    });
-    btn.addEventListener('blur', reset);
-  }
-
-  $('#buildBtn').addEventListener('click', () => {
+  $('#saveBtn').addEventListener('click', () => {
     const parsed = parseLines(input.value);
     if (!parsed.length) { toast('Add at least one candidate'); input.focus(); return; }
-    if (state.items.length) checkpoint();
     applyParsed(parsed);
-    state.example = false;
     save();
     closeSetup();
   });
   $('#cancelBtn').addEventListener('click', closeSetup);
-  confirmClick($('#exampleBtn'), 'Replace your text? Click again', () => input.value.trim() !== '', () => {
-    input.value = EXAMPLE;
-    input.focus();
-  });
-  confirmClick($('#clearBtn'), 'Click again to clear everything', () => true, () => {
-    if (state.items.length) checkpoint();
-    state.items = [];
-    state.title = '';
-    state.example = false;
-    titleEl.value = '';
-    save();
-    render();
-    openSetup(true);
-  });
 
   // ---------------------------------------------------------------- wiring
 
-  titleEl.addEventListener('input', () => {
-    state.title = titleEl.value;
-    setDocTitle();
-    save();
-  });
-  titleEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') titleEl.blur(); });
-
-  $('#editBtn').addEventListener('click', () => openSetup(false));
-  $('#ownBtn').addEventListener('click', () => openSetup(true));
-  undoBtn.addEventListener('click', undo);
-  $('#copyBtn').addEventListener('click', () => copyText(resultsText(), 'Ranking copied as text'));
-  $('#tableBtn').addEventListener('click', () => copyText(tableText(), 'Table copied. Paste it into Excel or Sheets.'));
+  $('#editBtn').addEventListener('click', openSetup);
+  $('#copyBtn').addEventListener('click', copyResults);
   $('#copyClose').addEventListener('click', () => copyDialog.close());
-  $('#presentBtn').addEventListener('click', () => setPresent(true));
-  exitPresentBtn.addEventListener('click', () => setPresent(false));
-  themeBtn.addEventListener('click', () => setTheme(!root.classList.contains('light')));
-
-  for (const st of document.querySelectorAll('[data-stepper]')) {
-    st.addEventListener('click', (e) => {
-      const b = e.target.closest('button[data-step]');
-      if (b) setStep(st.dataset.stepper, Number(b.dataset.step));
-    });
-  }
-
-  addInput.addEventListener('keydown', (e) => {
-    if (e.key !== 'Enter') return;
-    const parsed = parseLines(addInput.value);
-    if (!parsed.length) return;
-    checkpoint();
-    const added = parsed.map((p) => ({ id: uid(), name: p.name, summary: p.summary, starred: false, out: false }));
-    const active = activeItems();
-    state.items = [...active, ...added, ...state.items.filter((i) => i.out)];
-    addInput.value = '';
-    save();
-    render();
-    announce(`${added.map((i) => i.name).join(', ')} added at rank ${active.length + 1}`);
-  });
 
   board.addEventListener('click', (e) => {
     const btn = e.target.closest('.act');
     if (!btn) return;
     const id = btn.closest('.row').dataset.id;
-    if (btn.classList.contains('star')) toggleStar(id);
-    else if (btn.classList.contains('cross')) setOut(id, true);
-    else if (btn.classList.contains('restore')) setOut(id, false);
-    else if (btn.classList.contains('remove')) removeItem(id);
+    setOut(id, btn.classList.contains('cross'));
   });
 
   board.addEventListener('dblclick', (e) => {
@@ -1250,16 +835,8 @@
       const rows = [...board.querySelectorAll('.list > .row')];
       const next = rows[rows.indexOf(row) + (key === 'ArrowUp' ? -1 : 1)];
       if (next) next.focus();
-    } else if (key === 's' || key === 'S') {
-      toggleStar(id);
     } else if (key === 'x' || key === 'X') {
       setOut(id, !item.out);
-    } else if ((key === 'Delete' || key === 'Backspace') && item.out) {
-      e.preventDefault();
-      const rows = [...board.querySelectorAll('.list > .row')];
-      const next = rows[rows.indexOf(row) + 1] || rows[rows.indexOf(row) - 1];
-      removeItem(id);
-      if (next && next.isConnected) next.focus();
     } else if (key === 'Enter' || key === 'F2') {
       e.preventDefault();
       startEdit(row.querySelector('.name'));
@@ -1267,35 +844,8 @@
   });
 
   document.addEventListener('keydown', (e) => {
-    const typing = e.target.closest && e.target.closest('input, textarea, .editing');
-    if (e.key === 'Escape' && drag && drag.started) { endDrag(false); return; }
-    if (copyDialog.open) return;
-    if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'z' && !typing && setup.hidden) {
-      e.preventDefault();
-      undo();
-    } else if (e.key === 'Escape' && !typing && document.body.classList.contains('present')) {
-      setPresent(false);
-    }
+    if (e.key === 'Escape' && drag && drag.started) endDrag(false);
   });
-
-  function setPresent(on) {
-    root.classList.toggle('present', on);
-    document.body.classList.toggle('present', on);
-    exitPresentBtn.hidden = !on;
-    if (on) toast('Present mode. Press Esc to exit.');
-  }
-
-  function themeLabel() {
-    const label = root.classList.contains('light') ? 'Switch to dark theme' : 'Switch to light theme';
-    themeBtn.setAttribute('aria-label', label);
-    themeBtn.title = label;
-  }
-
-  function setTheme(light) {
-    root.classList.toggle('light', light);
-    themeLabel();
-    try { localStorage.setItem(THEME_KEY, light ? 'light' : 'dark'); } catch (e) { /* storage unavailable */ }
-  }
 
   let toastTimer;
   function toast(msg) {
@@ -1310,10 +860,8 @@
 
   // ---------------------------------------------------------------- start
 
-  themeLabel();
-  normalize();
-  render();
-  if (!state.items.length) openSetup(true);
+  if (state.items.length) render();
+  else openSetup();
 })();
 </script>
 </body>
